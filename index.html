@@ -1,50 +1,105 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Buscar Anteojo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Búsqueda de Anteojos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+      text-align: center;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 800px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    #resultado {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h2>Buscar Anteojo</h2>
 
-  <input type="text" id="numero" placeholder="Número de anteojo">
-  <button onclick="buscar()">Buscar</button>
+  <h2>Búsqueda de Anteojos</h2>
+  <input type="text" id="codigo" placeholder="Número de anteojo (columna A)" />
+  <button onclick="buscarAnteojo()">Buscar</button>
   <button onclick="limpiar()">Limpiar</button>
 
-  <div id="resultado" style="margin-top: 20px;"></div>
+  <div id="resultado">
+    <table>
+      <thead>
+        <tr id="encabezados"></tr>
+      </thead>
+      <tbody>
+        <tr id="valores"></tr>
+      </tbody>
+    </table>
+  </div>
 
   <script>
-    async function buscar() {
-      const numero = document.getElementById('numero').value.trim();
-      if (!numero) {
-        alert("Ingresá un número");
-        return;
-      }
+    async function buscarAnteojo() {
+      const codigo = document.getElementById('codigo').value.trim();
+      if (!codigo) return alert("Ingresá un número de anteojo");
 
-      const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?numero=${numero}`;
-
-      document.getElementById('resultado').innerText = 'Buscando...';
+      const url = 'https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=' + encodeURIComponent(codigo);
 
       try {
         const res = await fetch(url);
         const data = await res.json();
 
-        if (data && data.length > 0) {
-          const fila = data[0];
-          document.getElementById('resultado').innerText = Object.values(fila).join(' | ');
-        } else {
-          document.getElementById('resultado').innerText = 'No se encontró el número';
+        if (!data || !data.datos || data.datos.length === 0) {
+          alert("No se encontró el número de anteojo");
+          return;
         }
+
+        const encabezados = data.encabezados;
+        const valores = data.datos;
+
+        const headRow = document.getElementById('encabezados');
+        const valRow = document.getElementById('valores');
+        headRow.innerHTML = '';
+        valRow.innerHTML = '';
+
+        encabezados.forEach(texto => {
+          const th = document.createElement('th');
+          th.textContent = texto;
+          headRow.appendChild(th);
+        });
+
+        valores.forEach(valor => {
+          const td = document.createElement('td');
+          td.textContent = valor;
+          valRow.appendChild(td);
+        });
+
+        document.getElementById('resultado').style.display = 'block';
+
       } catch (error) {
-        document.getElementById('resultado').innerText = 'Error al buscar';
+        alert("Error al buscar los datos");
         console.error(error);
       }
     }
 
     function limpiar() {
-      document.getElementById('numero').value = '';
-      document.getElementById('resultado').innerText = '';
+      document.getElementById('codigo').value = '';
+      document.getElementById('resultado').style.display = 'none';
     }
   </script>
+
 </body>
 </html>
