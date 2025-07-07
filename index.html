@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
+      background: #f5f5f5;
       padding: 20px;
       text-align: center;
     }
@@ -19,9 +19,9 @@
     table {
       margin: 20px auto;
       border-collapse: collapse;
-      width: 90%;
-      max-width: 800px;
-      background: #fff;
+      width: 95%;
+      max-width: 1000px;
+      background: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     th, td {
@@ -35,7 +35,7 @@
 </head>
 <body>
 
-  <h2>Búsqueda de Anteojos</h2>
+  <h2>v 7-7 18.41 Buscar Anteojo por Número</h2>
   <input type="text" id="codigo" placeholder="Número de anteojo (columna A)" />
   <button onclick="buscarAnteojo()">Buscar</button>
   <button onclick="limpiar()">Limpiar</button>
@@ -43,11 +43,22 @@
   <div id="resultado">
     <table>
       <thead>
-        <tr id="encabezados"></tr>
+        <tr>
+          <th>N° ANT</th>
+          <th>MARCA</th>
+          <th>MODELO</th>
+          <th>COLOR</th>
+          <th>ARMAZÓN</th>
+          <th>CALIBRE</th>
+          <th>COLOR CRISTAL</th>
+          <th>FAMILIA</th>
+          <th>FILA</th>
+          <th>PRECIO</th>
+          <th>FECHA DE VENTA</th>
+          <th>VENDEDOR</th>
+        </tr>
       </thead>
-      <tbody>
-        <tr id="valores"></tr>
-      </tbody>
+      <tbody id="contenido"></tbody>
     </table>
   </div>
 
@@ -56,37 +67,29 @@
       const codigo = document.getElementById('codigo').value.trim();
       if (!codigo) return alert("Ingresá un número de anteojo");
 
-      const url = 'https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=' + encodeURIComponent(codigo);
+      const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=${encodeURIComponent(codigo)}`;
 
       try {
         const res = await fetch(url);
         const data = await res.json();
 
-        if (!data || !data.datos || data.datos.length === 0) {
+        if (!Array.isArray(data) || data.length === 0) {
           alert("No se encontró el número de anteojo");
           return;
         }
 
-        const encabezados = data.encabezados;
-        const valores = data.datos;
+        const tbody = document.getElementById('contenido');
+        tbody.innerHTML = "";
 
-        const headRow = document.getElementById('encabezados');
-        const valRow = document.getElementById('valores');
-        headRow.innerHTML = '';
-        valRow.innerHTML = '';
+        const fila = data[0]; // solo mostramos la primera coincidencia
 
-        encabezados.forEach(texto => {
-          const th = document.createElement('th');
-          th.textContent = texto;
-          headRow.appendChild(th);
-        });
-
-        valores.forEach(valor => {
+        const tr = document.createElement('tr');
+        fila.forEach(valor => {
           const td = document.createElement('td');
           td.textContent = valor;
-          valRow.appendChild(td);
+          tr.appendChild(td);
         });
-
+        tbody.appendChild(tr);
         document.getElementById('resultado').style.display = 'block';
 
       } catch (error) {
@@ -97,6 +100,7 @@
 
     function limpiar() {
       document.getElementById('codigo').value = '';
+      document.getElementById('contenido').innerHTML = '';
       document.getElementById('resultado').style.display = 'none';
     }
   </script>
