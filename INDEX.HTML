@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Buscar Anteojo</title>
+</head>
+<body>
+  <h2>Buscar Anteojo</h2>
+
+  <input type="text" id="numero" placeholder="Número de anteojo">
+  <button onclick="buscar()">Buscar</button>
+  <button onclick="limpiar()">Limpiar</button>
+
+  <div id="resultado" style="margin-top: 20px;"></div>
+
+  <script>
+    async function buscar() {
+      const numero = document.getElementById('numero').value.trim();
+      if (!numero) {
+        alert("Ingresá un número");
+        return;
+      }
+
+      const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?numero=${numero}`;
+
+      document.getElementById('resultado').innerText = 'Buscando...';
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+          const fila = data[0];
+          document.getElementById('resultado').innerText = Object.values(fila).join(' | ');
+        } else {
+          document.getElementById('resultado').innerText = 'No se encontró el número';
+        }
+      } catch (error) {
+        document.getElementById('resultado').innerText = 'Error al buscar';
+        console.error(error);
+      }
+    }
+
+    function limpiar() {
+      document.getElementById('numero').value = '';
+      document.getElementById('resultado').innerText = '';
+    }
+  </script>
+</body>
+</html>
