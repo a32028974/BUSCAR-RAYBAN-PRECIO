@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Precio RAY-BAN</title>
+  <title>RAY-BAN</title>
   <link rel="icon" type="image/png" href="rayban.png" />
   <style>
     body {
@@ -81,13 +81,11 @@
 
   <script>
     async function buscarAnteojo() {
-      const codigo = document.getElementById('codigo').value.trim();
+      const codigoInput = document.getElementById('codigo');
+      const codigo = codigoInput.value.trim();
       if (!codigo) return alert("Ingresá un número de anteojo");
 
       document.getElementById('spinner').style.display = 'block';
-      document.getElementById('resultado').style.display = 'none';
-      document.getElementById('contenido').innerHTML = '';
-
       const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=${encodeURIComponent(codigo)}`;
 
       try {
@@ -105,7 +103,7 @@
         const tbody = document.getElementById('contenido');
         const tr = document.createElement('tr');
 
-        // Mapeo específico: evitamos índice [8] que es la "FILA"
+        // Mostrar solo columnas necesarias (evitar columna 8 que es Fila)
         const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
         indicesAMostrar.forEach(i => {
           const td = document.createElement('td');
@@ -115,6 +113,8 @@
 
         tbody.appendChild(tr);
         document.getElementById('resultado').style.display = 'block';
+        codigoInput.value = '';
+        codigoInput.focus();
 
       } catch (error) {
         document.getElementById('spinner').style.display = 'none';
