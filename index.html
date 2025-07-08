@@ -43,6 +43,12 @@
     #resultado {
       display: none;
     }
+
+    #ultimaActualizacion {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -52,11 +58,13 @@
     Número de anteojo
   </h2>
 
-  <input type="text" id="codigo" placeholder="Ejemplo 1205" />
+  <input type="text" id="codigo" placeholder="Número de etiqueta" />
   <button onclick="buscarAnteojo()">Buscar</button>
   <button onclick="limpiar()">Limpiar</button>
+  <button onclick="actualizarStock()">Actualizar stock</button>
 
   <div id="spinner">🔍 Buscando anteojo...</div>
+  <div id="ultimaActualizacion"></div>
 
   <div id="resultado">
     <table>
@@ -80,47 +88,99 @@
   </div>
 
   <script>
+    let stockLocal = [];
+
+    async function cargarStock() {
+      const guardado = localStorage.getItem("stock");
+      const ultima = localStorage.getItem("ultimaActualizacion");
+
+      if (guardado) {
+        try {
+          stockLocal = JSON.parse(guardado);
+          if (ultima) {
+            document.getElementById('ultimaActualizacion').textContent = "Última actualización: " + ultima;
+          }
+          return;
+        } catch (e) {
+          console.warn("Error leyendo el stock local. Se descargará de nuevo.");
+        }
+      }
+
+      await actualizarStock(); // si no hay nada, lo descarga ahora
+    }
+
+    async function actualizarStock() {
+      document.getElementById('spinner').style.display = 'block';
+
+      try {
+        const res = await fetch('https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?todos=true');
+        const datos = await res.json();
+
+        if (!Array.isArray(datos) || datos.length === 0) {
+          alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
+          return;
+        }
+
+        stockLocal = datos;
+        localStorage.setItem("stock", JSON.stringify(datos));
+        const fecha = new Date().toLocaleString();
+        localStorage.setItem("ultimaActualizacion", fecha);
+        document.getElementById('ultimaActualizacion').textContent = "Última actualización: " + fecha;
+        alert("✅ Stock actualizado correctamente.");
+      } catch (e) {
+        alert("❌ Error al actualizar el stock. Verificá tu conexión.");
+        console.error(e);
+      } finally {
+        document.getElementById('spinner').style.display = 'none';
+      }
+    }
+
     async function buscarAnteojo() {
       const codigoInput = document.getElementById('codigo');
       const codigo = codigoInput.value.trim();
       if (!codigo) return alert("Ingresá un número de anteojo");
 
       document.getElementById('spinner').style.display = 'block';
-      const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=${encodeURIComponent(codigo)}`;
 
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
+      let fila = null;
 
-        document.getElementById('spinner').style.display = 'none';
-
-        if (!Array.isArray(data) || data.length === 0) {
-          alert("No se encontró el número de anteojo");
-          return;
-        }
-
-        const fila = data[0];
-        const tbody = document.getElementById('contenido');
-        const tr = document.createElement('tr');
-
-        // Mostrar solo columnas necesarias (evitar columna 8 que es Fila)
-        const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
-        indicesAMostrar.forEach(i => {
-          const td = document.createElement('td');
-          td.textContent = fila[i] || '';
-          tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-        document.getElementById('resultado').style.display = 'block';
-        codigoInput.value = '';
-        codigoInput.focus();
-
-      } catch (error) {
-        document.getElementById('spinner').style.display = 'none';
-        alert("Error al buscar los datos");
-        console.error(error);
+      if (Array.isArray(stockLocal) && stockLocal.length > 0) {
+        fila = stockLocal.find((f, i) => i !== 0 && String(f[0]).trim() === codigo);
       }
+
+      if (!fila) {
+        const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=${encodeURIComponent(codigo)}`;
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          fila = Array.isArray(data) && data.length > 0 ? data[0] : null;
+        } catch (error) {
+          alert("Error consultando en línea");
+          console.error(error);
+        }
+      }
+
+      document.getElementById('spinner').style.display = 'none';
+
+      if (!fila) {
+        alert("No se encontró el número de anteojo");
+        return;
+      }
+
+      const tbody = document.getElementById('contenido');
+      const tr = document.createElement('tr');
+      const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
+
+      indicesAMostrar.forEach(i => {
+        const td = document.createElement('td');
+        td.textContent = fila[i] || '';
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+      document.getElementById('resultado').style.display = 'block';
+      codigoInput.value = '';
+      codigoInput.focus();
     }
 
     function limpiar() {
@@ -133,6 +193,7 @@
 
     window.onload = () => {
       document.getElementById('codigo').focus();
+      cargarStock();
     };
   </script>
 
