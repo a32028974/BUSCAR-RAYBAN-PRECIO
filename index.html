@@ -107,115 +107,134 @@
   <div id="ultimaActualizacion"></div>
 
   <script>
-    let stockLocal = [];
+  let stockLocal = [];
+  let resultadosPersistentes = [];
 
-    async function actualizarStock() {
-      document.getElementById('spinner').style.display = 'block';
-      try {
-        const res = await fetch('https://script.google.com/macros/s/AKfycbz2l87fXmnZ89IX_PH6X1o4guwc2AxTKv9HNlQrr6g33LWXoN3nYrKS0ndnApSVtbEEug/exec?todos=true');
-
-        const datos = await res.json();
-
-        if (!Array.isArray(datos)) {
-          alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
-          return;
-        }
-
-        stockLocal = datos;
-        localStorage.setItem("stock", JSON.stringify(datos));
-        const fecha = new Date().toLocaleString();
-        localStorage.setItem("ultimaActualizacion", fecha);
-        document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
-        alert("✅ Stock actualizado correctamente.");
-      } catch (e) {
-        alert("❌ Error al actualizar el stock. Verificá tu conexión.");
-        console.error(e);
-      } finally {
-        document.getElementById('spinner').style.display = 'none';
-      }
-    }
-
-    async function buscarAnteojo() {
-      const input = document.getElementById('codigo');
-      const codigo = input.value.trim().toLowerCase();
-      const avanzada = document.getElementById('busquedaAvanzada').checked;
-      const inicio = performance.now();
-      document.getElementById('spinner').style.display = 'block';
-      document.getElementById('tiempoBusqueda').textContent = '';
-
-      const tbody = document.getElementById('contenido');
-      const palabras = codigo.split(/\s+/);
-
-      tbody.innerHTML = ''; // limpia solo las filas anteriores
-
-      if (!codigo) {
-        alert("Ingresá un número o palabras clave");
-        document.getElementById('spinner').style.display = 'none';
+  async function actualizarStock() {
+    document.getElementById('spinner').style.display = 'block';
+    try {
+      const res = await fetch('https://script.google.com/macros/s/AKfycbz2l87fXmnZ89IX_PH6X1o4guwc2AxTKv9HNlQrr6g33LWXoN3nYrKS0ndnApSVtbEEug/exec?todos=true');
+      const datos = await res.json();
+      if (!Array.isArray(datos)) {
+        alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
         return;
       }
+      stockLocal = datos;
+      localStorage.setItem("stock", JSON.stringify(datos));
+      const fecha = new Date().toLocaleString();
+      localStorage.setItem("ultimaActualizacion", fecha);
+      document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
+      alert("✅ Stock actualizado correctamente.");
+    } catch (e) {
+      alert("❌ Error al actualizar el stock. Verificá tu conexión.");
+      console.error(e);
+    } finally {
+      document.getElementById('spinner').style.display = 'none';
+    }
+  }
 
-      let resultados = [];
+  async function buscarAnteojo() {
+    const input = document.getElementById('codigo');
+    const codigo = input.value.trim().toLowerCase();
+    const avanzada = document.getElementById('busquedaAvanzada').checked;
+    const inicio = performance.now();
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('tiempoBusqueda').textContent = '';
 
-      if (Array.isArray(stockLocal) && stockLocal.length > 0) {
-        if (avanzada) {
-          resultados = stockLocal.filter((fila, index) => {
-            if (index === 0) return false;
-            const filaTexto = fila.join(" ").toLowerCase();
-            return palabras.every(palabra => filaTexto.includes(palabra));
-          });
-        } else {
-          resultados = stockLocal.filter((fila, index) => {
-            return index !== 0 && Number(fila[0]) === Number(codigo);
-          });
-        }
-      }
+    const tbody = document.getElementById('contenido');
+    const palabras = codigo.split(/\s+/);
 
-      if (resultados.length === 0) {
-        alert("No se encontró ningún resultado");
-      } else {
-        resultados.forEach(fila => {
-          const tr = document.createElement('tr');
-          const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
-          indicesAMostrar.forEach(i => {
-            const td = document.createElement('td');
-            td.textContent = fila[i] || '';
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
+    if (!codigo) {
+      alert("Ingresá un número o palabras clave");
+      document.getElementById('spinner').style.display = 'none';
+      return;
+    }
+
+    let nuevosResultados = [];
+
+    if (Array.isArray(stockLocal) && stockLocal.length > 0) {
+      if (avanzada) {
+        nuevosResultados = stockLocal.filter((fila, index) => {
+          if (index === 0) return false;
+          const filaTexto = fila.join(" ").toLowerCase();
+          return palabras.every(palabra => filaTexto.includes(palabra));
         });
-        document.getElementById('resultado').style.display = 'block';
-      }
 
-      input.value = '';
-      input.focus();
-      document.getElementById('spinner').style.display = 'none';
-      const tiempo = (performance.now() - inicio).toFixed(2);
-      document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
+        // mantener solo los seleccionados en resultadosPersistentes
+        const seleccionados = Array.from(document.querySelectorAll('input.resultado-check:checked'))
+          .map(chk => chk.dataset.id);
+        resultadosPersistentes = resultadosPersistentes.filter(fila => seleccionados.includes(fila[0].toString()));
+      } else {
+        nuevosResultados = stockLocal.filter((fila, index) => {
+          return index !== 0 && Number(fila[0]) === Number(codigo);
+        });
+        resultadosPersistentes = resultadosPersistentes.concat(nuevosResultados);
+      }
     }
 
-    function limpiar() {
-      document.getElementById('codigo').value = '';
-      document.getElementById('contenido').innerHTML = '';
+    if (nuevosResultados.length === 0 && resultadosPersistentes.length === 0) {
+      alert("No se encontró ningún resultado");
+      tbody.innerHTML = '';
       document.getElementById('resultado').style.display = 'none';
-      document.getElementById('spinner').style.display = 'none';
-      document.getElementById('tiempoBusqueda').textContent = '';
-      document.getElementById('codigo').focus();
+    } else {
+      const todosResultados = avanzada ? resultadosPersistentes.concat(nuevosResultados) : resultadosPersistentes;
+      const unicos = Array.from(new Map(todosResultados.map(f => [f[0], f])).values());
+
+      tbody.innerHTML = '';
+      unicos.forEach(fila => {
+        const tr = document.createElement('tr');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'resultado-check';
+        checkbox.dataset.id = fila[0];
+        checkbox.checked = true;
+        const tdChk = document.createElement('td');
+        tdChk.appendChild(checkbox);
+        tr.appendChild(tdChk);
+
+        const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
+        indicesAMostrar.forEach(i => {
+          const td = document.createElement('td');
+          td.textContent = fila[i] || '';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      resultadosPersistentes = unicos;
+      document.getElementById('resultado').style.display = 'block';
     }
 
-    window.onload = () => {
-      document.getElementById('codigo').focus();
-      const ultima = localStorage.getItem("ultimaActualizacion");
-      if (ultima) {
-        document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
-      }
+    document.getElementById('spinner').style.display = 'none';
+    const tiempo = (performance.now() - inicio).toFixed(2);
+    document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
+  }
 
-      document.getElementById("codigo").addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          buscarAnteojo();
-        }
-      });
-    };
-  </script>
+  function limpiar() {
+    document.getElementById('codigo').value = '';
+    document.getElementById('contenido').innerHTML = '';
+    document.getElementById('resultado').style.display = 'none';
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('tiempoBusqueda').textContent = '';
+    document.getElementById('codigo').focus();
+    resultadosPersistentes = [];
+  }
+
+  window.onload = () => {
+    document.getElementById('codigo').focus();
+    const ultima = localStorage.getItem("ultimaActualizacion");
+    if (ultima) {
+      document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
+    }
+
+    document.getElementById("codigo").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        buscarAnteojo();
+      }
+    });
+  };
+</script>
+
 </body>
 </html>
