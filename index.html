@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAY-BAN</title>
+  <title>RAY-BAN - Búsqueda Avanzada</title>
   <link rel="icon" type="image/png" href="rayban.png" />
   <style>
     body {
@@ -57,6 +57,11 @@
       color: #888;
       margin-top: 5px;
     }
+
+    #busquedaAvanzadaLabel {
+      font-size: 14px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -66,7 +71,12 @@
     Número de anteojo
   </h2>
 
-  <input type="text" id="codigo" placeholder="Número de etiqueta" />
+  <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
+  <label id="busquedaAvanzadaLabel">
+    <input type="checkbox" id="busquedaAvanzada" />
+    Búsqueda avanzada
+  </label>
+  <br>
   <button onclick="buscarAnteojo()">Buscar</button>
   <button onclick="limpiar()">Limpiar</button>
   <button onclick="actualizarStock()">Actualizar stock</button>
@@ -101,7 +111,6 @@
 
     async function actualizarStock() {
       document.getElementById('spinner').style.display = 'block';
-
       try {
         const res = await fetch('https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=999999');
         const datos = await res.json();
@@ -126,56 +135,60 @@
     }
 
     async function buscarAnteojo() {
-      const codigoInput = document.getElementById('codigo');
-      const codigo = codigoInput.value.trim();
-      if (!codigo) return alert("Ingresá un número de anteojo");
-
+      const input = document.getElementById('codigo');
+      const codigo = input.value.trim().toLowerCase();
+      const avanzada = document.getElementById('busquedaAvanzada').checked;
       const inicio = performance.now();
       document.getElementById('spinner').style.display = 'block';
       document.getElementById('tiempoBusqueda').textContent = '';
 
-      let fila = null;
+      const tbody = document.getElementById('contenido');
+      const palabras = codigo.split(/\s+/);
 
-      if (Array.isArray(stockLocal) && stockLocal.length > 0) {
-        fila = stockLocal.find((f, i) => i !== 0 && String(f[0]).trim() === codigo);
-      }
+      tbody.innerHTML = ''; // limpia solo las filas anteriores
 
-      if (!fila) {
-        const url = `https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=${encodeURIComponent(codigo)}`;
-        try {
-          const res = await fetch(url);
-          const data = await res.json();
-          fila = Array.isArray(data) && data.length > 0 ? data[0] : null;
-        } catch (error) {
-          alert("Error consultando en línea");
-          console.error(error);
-        }
-      }
-
-      document.getElementById('spinner').style.display = 'none';
-
-      if (!fila) {
-        alert("No se encontró el número de anteojo");
+      if (!codigo) {
+        alert("Ingresá un número o palabras clave");
+        document.getElementById('spinner').style.display = 'none';
         return;
       }
 
-      const tbody = document.getElementById('contenido');
-      const tr = document.createElement('tr');
-      const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
+      let resultados = [];
 
-      indicesAMostrar.forEach(i => {
-        const td = document.createElement('td');
-        td.textContent = fila[i] || '';
-        tr.appendChild(td);
-      });
+      if (Array.isArray(stockLocal) && stockLocal.length > 0) {
+        if (avanzada) {
+          resultados = stockLocal.filter((fila, index) => {
+            if (index === 0) return false;
+            const filaTexto = fila.join(" ").toLowerCase();
+            return palabras.every(palabra => filaTexto.includes(palabra));
+          });
+        } else {
+          resultados = stockLocal.filter((fila, index) => {
+            return index !== 0 && String(fila[0]).trim() === codigo;
+          });
+        }
+      }
 
-      tbody.appendChild(tr);
-      document.getElementById('resultado').style.display = 'block';
-      codigoInput.value = '';
-      codigoInput.focus();
+      if (resultados.length === 0) {
+        alert("No se encontró ningún resultado");
+      } else {
+        resultados.forEach(fila => {
+          const tr = document.createElement('tr');
+          const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
+          indicesAMostrar.forEach(i => {
+            const td = document.createElement('td');
+            td.textContent = fila[i] || '';
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        document.getElementById('resultado').style.display = 'block';
+      }
 
-      const fin = performance.now();
-      const tiempo = (fin - inicio).toFixed(2);
+      input.value = '';
+      input.focus();
+      document.getElementById('spinner').style.display = 'none';
+      const tiempo = (performance.now() - inicio).toFixed(2);
       document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
     }
 
@@ -190,13 +203,18 @@
 
     window.onload = () => {
       document.getElementById('codigo').focus();
-
       const ultima = localStorage.getItem("ultimaActualizacion");
       if (ultima) {
         document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
       }
+
+      document.getElementById("codigo").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          buscarAnteojo();
+        }
+      });
     };
   </script>
-
 </body>
 </html>
