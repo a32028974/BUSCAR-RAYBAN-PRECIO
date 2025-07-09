@@ -48,6 +48,14 @@
       margin-top: 10px;
       font-size: 14px;
       color: #666;
+      text-align: right;
+      padding-right: 20px;
+    }
+
+    #tiempoBusqueda {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
     }
   </style>
 </head>
@@ -64,8 +72,6 @@
   <button onclick="actualizarStock()">Actualizar stock</button>
 
   <div id="spinner">🔍 Buscando anteojo...</div>
-  <div id="ultimaActualizacion"></div>
-
   <div id="resultado">
     <table>
       <thead>
@@ -85,38 +91,22 @@
       </thead>
       <tbody id="contenido"></tbody>
     </table>
+    <div id="tiempoBusqueda"></div>
   </div>
+
+  <div id="ultimaActualizacion"></div>
 
   <script>
     let stockLocal = [];
-
-    async function cargarStock() {
-      const guardado = localStorage.getItem("stock");
-      const ultima = localStorage.getItem("ultimaActualizacion");
-
-      if (guardado) {
-        try {
-          stockLocal = JSON.parse(guardado);
-          if (ultima) {
-            document.getElementById('ultimaActualizacion').textContent = "Última actualización: " + ultima;
-          }
-          return;
-        } catch (e) {
-          console.warn("Error leyendo el stock local. Se descargará de nuevo.");
-        }
-      }
-
-      await actualizarStock(); // si no hay nada, lo descarga ahora
-    }
 
     async function actualizarStock() {
       document.getElementById('spinner').style.display = 'block';
 
       try {
-        const res = await fetch('https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?todos=true');
+        const res = await fetch('https://script.google.com/macros/s/AKfycbyZpgCOy4VFFPE_gq_jpv9Ed5KsPjJqLAX-8SEohVRYl_qAm2PIpEtpAALLvRx9Bdt7Pg/exec?codigo=999999');
         const datos = await res.json();
 
-        if (!Array.isArray(datos) || datos.length === 0) {
+        if (!Array.isArray(datos)) {
           alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
           return;
         }
@@ -125,7 +115,7 @@
         localStorage.setItem("stock", JSON.stringify(datos));
         const fecha = new Date().toLocaleString();
         localStorage.setItem("ultimaActualizacion", fecha);
-        document.getElementById('ultimaActualizacion').textContent = "Última actualización: " + fecha;
+        document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
         alert("✅ Stock actualizado correctamente.");
       } catch (e) {
         alert("❌ Error al actualizar el stock. Verificá tu conexión.");
@@ -140,7 +130,9 @@
       const codigo = codigoInput.value.trim();
       if (!codigo) return alert("Ingresá un número de anteojo");
 
+      const inicio = performance.now();
       document.getElementById('spinner').style.display = 'block';
+      document.getElementById('tiempoBusqueda').textContent = '';
 
       let fila = null;
 
@@ -181,6 +173,10 @@
       document.getElementById('resultado').style.display = 'block';
       codigoInput.value = '';
       codigoInput.focus();
+
+      const fin = performance.now();
+      const tiempo = (fin - inicio).toFixed(2);
+      document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
     }
 
     function limpiar() {
@@ -188,12 +184,17 @@
       document.getElementById('contenido').innerHTML = '';
       document.getElementById('resultado').style.display = 'none';
       document.getElementById('spinner').style.display = 'none';
+      document.getElementById('tiempoBusqueda').textContent = '';
       document.getElementById('codigo').focus();
     }
 
     window.onload = () => {
       document.getElementById('codigo').focus();
-      cargarStock();
+
+      const ultima = localStorage.getItem("ultimaActualizacion");
+      if (ultima) {
+        document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
+      }
     };
   </script>
 
