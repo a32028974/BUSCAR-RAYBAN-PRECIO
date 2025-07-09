@@ -112,7 +112,8 @@
     async function actualizarStock() {
       document.getElementById('spinner').style.display = 'block';
       try {
-        const res = await fetch('https://script.google.com/macros/s/AKfycbz2l87fXmnZ89IX_PH6X1o4guwc2AxTKv9HNlQrr6g33LWXoN3nYrKS0ndnApSVtbEEug/exec?codigo=999999');
+        const res = await fetch('https://script.google.com/macros/s/AKfycbz2l87fXmnZ89IX_PH6X1o4guwc2AxTKv9HNlQrr6g33LWXoN3nYrKS0ndnApSVtbEEug/exec?todos=true');
+
         const datos = await res.json();
 
         if (!Array.isArray(datos)) {
