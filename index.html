@@ -135,77 +135,88 @@
       }
     }
 
-    async function buscarAnteojo() {
-      const input = document.getElementById('codigo');
-      const codigo = input.value.trim().toLowerCase();
-      const avanzada = document.getElementById('busquedaAvanzada').checked;
-      const inicio = performance.now();
-      document.getElementById('spinner').style.display = 'block';
-      document.getElementById('tiempoBusqueda').textContent = '';
+async function buscarAnteojo() {
+  const input = document.getElementById('codigo');
+  const codigo = input.value.trim().toLowerCase();
+  const avanzada = document.getElementById('busquedaAvanzada').checked;
+  const inicio = performance.now();
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('tiempoBusqueda').textContent = '';
 
-      if (!codigo) {
-        alert("Ingresá un número o palabras clave");
-        document.getElementById('spinner').style.display = 'none';
-        return;
-      }
+  if (!codigo) {
+    alert("Ingresá un número o palabras clave");
+    document.getElementById('spinner').style.display = 'none';
+    return;
+  }
 
-      const palabras = codigo.split(/\s+/);
-      const tbody = document.getElementById('contenido');
-      const filasSeleccionadas = new Set();
+  const palabras = codigo.split(/\s+/);
+  const tbody = document.getElementById('contenido');
 
-      // guardar seleccionados si es búsqueda avanzada
-      if (avanzada) {
-        document.querySelectorAll("#contenido input[type='checkbox']:checked").forEach(cb => {
-          filasSeleccionadas.add(cb.dataset.id);
-        });
-        tbody.innerHTML = '';
-      }
+  // Guardar seleccionados existentes
+  const seleccionados = new Set();
+  const filasPrevias = Array.from(tbody.querySelectorAll("tr"));
 
-      let resultados = [];
-
-      if (Array.isArray(stockLocal) && stockLocal.length > 0) {
-        if (avanzada) {
-          resultados = stockLocal.filter((fila, index) => {
-            if (index === 0) return false;
-            const filaTexto = fila.join(" ").toLowerCase();
-            return palabras.every(palabra => filaTexto.includes(palabra));
-          });
-        } else {
-          resultados = stockLocal.filter((fila, index) => {
-            return index !== 0 && Number(fila[0]) === Number(codigo);
-          });
-        }
-      }
-
-      if (resultados.length === 0) {
-        alert("No se encontró ningún resultado");
-      } else {
-        resultados.forEach((fila, index) => {
-          const tr = document.createElement('tr');
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.dataset.id = fila[0];
-          checkbox.checked = !avanzada || filasSeleccionadas.has(fila[0]);
-          const tdCheck = document.createElement('td');
-          tdCheck.appendChild(checkbox);
-          tr.appendChild(tdCheck);
-
-          const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
-          indicesAMostrar.forEach(i => {
-            const td = document.createElement('td');
-            td.textContent = fila[i] || '';
-            tr.appendChild(td);
-          });
-
-          tbody.appendChild(tr);
-        });
-        document.getElementById('resultado').style.display = 'block';
-      }
-
-      document.getElementById('spinner').style.display = 'none';
-      const tiempo = (performance.now() - inicio).toFixed(2);
-      document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
+  filasPrevias.forEach(fila => {
+    const checkbox = fila.querySelector("input[type='checkbox']");
+    if (checkbox?.checked) {
+      seleccionados.add(checkbox.dataset.id);
+    } else if (avanzada) {
+      // borrar si no está seleccionado solo en avanzada
+      fila.remove();
     }
+  });
+
+  let resultados = [];
+
+  if (Array.isArray(stockLocal) && stockLocal.length > 0) {
+    if (avanzada) {
+      resultados = stockLocal.filter((fila, index) => {
+        if (index === 0) return false;
+        const filaTexto = fila.join(" ").toLowerCase();
+        return palabras.every(palabra => filaTexto.includes(palabra));
+      });
+    } else {
+      resultados = stockLocal.filter((fila, index) => {
+        return index !== 0 && Number(fila[0]) === Number(codigo);
+      });
+    }
+  }
+
+  if (resultados.length === 0) {
+    alert("No se encontró ningún resultado");
+  } else {
+    resultados.forEach(fila => {
+      if (seleccionados.has(fila[0])) return; // ya está tildado y en pantalla
+
+      const tr = document.createElement('tr');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.id = fila[0];
+      checkbox.checked = true;
+
+      const tdCheck = document.createElement('td');
+      tdCheck.appendChild(checkbox);
+      tr.appendChild(tdCheck);
+
+      const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
+      indicesAMostrar.forEach(i => {
+        const td = document.createElement('td');
+        td.textContent = fila[i] || '';
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('resultado').style.display = 'block';
+  }
+
+  // NO borramos el valor del input ahora
+  document.getElementById('spinner').style.display = 'none';
+  const tiempo = (performance.now() - inicio).toFixed(2);
+  document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
+}
+
 
     function limpiar() {
       document.getElementById('codigo').value = '';
