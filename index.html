@@ -164,7 +164,7 @@
           });
         } else {
           resultados = stockLocal.filter((fila, index) => {
-            return index !== 0 && String(fila[0]).trim() === codigo;
+            return index !== 0 && Number(fila[0]) === Number(codigo);
           });
         }
       }
