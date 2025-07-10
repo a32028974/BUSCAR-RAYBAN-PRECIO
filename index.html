@@ -112,6 +112,7 @@
         <th onclick="ordenarPor(8)">PRECIO</th>
         <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
         <th onclick="ordenarPor(10)">VENDEDOR</th>
+        <th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
       </tr>
     </thead>
     <tbody id="contenido"></tbody>
@@ -236,11 +237,13 @@ async function buscarAnteojo() {
       tdCheck.appendChild(checkbox);
       tr.appendChild(tdCheck);
 
-      for (let i = 0; i <= 10; i++) {
+      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9]; // el 9 (fecha ingreso) al final
+
+      indicesAMostrar.forEach(i => {
         const td = document.createElement('td');
-        td.textContent = fila[i] && fila[i] !== "" ? fila[i] : '-';
+        td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
         tr.appendChild(td);
-      }
+      });
 
       tbody.appendChild(tr);
       nuevos++;
@@ -290,5 +293,6 @@ window.onload = () => {
   });
 };
 </script>
+
 </body>
 </html>
