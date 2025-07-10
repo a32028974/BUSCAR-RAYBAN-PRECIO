@@ -68,7 +68,7 @@
 
   <h2>
     <img src="rayban.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
-    Número de anteojo v16.28
+    Número de anteojo v16.49
   </h2>
 
   <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
@@ -114,7 +114,7 @@ let stockLocal = [];
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
   try {
-    const res = await fetch('https://script.google.com/macros/s/AKfycbzGRHU_0FurkAT4kcSTn-F0WSpaDDRsuDGQ5mvAx_X_pGXmpHJwzxBJEUJ9a69xeQgFtA/exec?todos=true');
+    const res = await fetch('https://script.google.com/macros/s/AKfycbwTRGt2r_BiG-d_YM59jcOapADtr01o1PABD4QUT-br12Kw87--BVWwi4FF1pmcPIPHCw/exec?todos=true');
     const datos = await res.json();
 
     if (!Array.isArray(datos)) {
