@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAY-BAN - Búsqueda Avanzada</title>
-  <link rel="icon" type="image/png" href="rayban.png" />
+  <title>Stock Anteojos sol y receta</title>
+  <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -67,8 +68,7 @@
 <body>
 
   <h2>
-    <img src="rayban.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
-    Número de anteojo v16.49
+        Número de anteojo
   </h2>
 
   <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
@@ -98,6 +98,7 @@
           <th>PRECIO</th>
           <th>FECHA DE VENTA</th>
           <th>VENDEDOR</th>
+          <th>FECHA DE INGRESO</th> <!-- ✅ Nueva columna -->
         </tr>
       </thead>
       <tbody id="contenido"></tbody>
@@ -107,7 +108,6 @@
 
   <div id="ultimaActualizacion"></div>
 
-  <!-- Todo el contenido es igual excepto esto dentro del script -->
 <script>
 let stockLocal = [];
 
@@ -118,18 +118,25 @@ async function actualizarStock() {
     const datos = await res.json();
 
     if (!Array.isArray(datos)) {
-      alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
+      Swal.fire("⚠ Error", "No se pudo actualizar el stock.", "error");
       return;
     }
 
     stockLocal = datos;
-    localStorage.setItem("stock", JSON.stringify(datos));
     const fecha = new Date().toLocaleString();
+    localStorage.setItem("stock", JSON.stringify(datos));
     localStorage.setItem("ultimaActualizacion", fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
-    alert("✅ Stock actualizado correctamente.");
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Stock actualizado',
+      showConfirmButton: false,
+      timer: 1200
+    });
+
   } catch (e) {
-    alert("❌ Error al actualizar el stock. Verificá tu conexión.");
+    Swal.fire("❌ Error", "No se pudo conectar con la base de datos.", "error");
     console.error(e);
   } finally {
     document.getElementById('spinner').style.display = 'none';
@@ -145,7 +152,7 @@ async function buscarAnteojo() {
   document.getElementById('tiempoBusqueda').textContent = '';
 
   if (!codigo) {
-    alert("Ingresá un número o palabras clave");
+    Swal.fire("🔎", "Ingresá un número o palabras clave", "info");
     document.getElementById('spinner').style.display = 'none';
     return;
   }
@@ -181,7 +188,7 @@ async function buscarAnteojo() {
   }
 
   if (resultados.length === 0) {
-    alert("No se encontró ningún resultado");
+    Swal.fire("Sin resultados", "No se encontró ningún resultado", "warning");
   } else {
     resultados.forEach(fila => {
       if (seleccionados.has(fila[0])) return;
@@ -196,7 +203,7 @@ async function buscarAnteojo() {
       tdCheck.appendChild(checkbox);
       tr.appendChild(tdCheck);
 
-      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,9,10,11];
+      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9]; // ✅ nota el 9 al final (fecha ingreso)
       indicesAMostrar.forEach(i => {
         const td = document.createElement('td');
         td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
