@@ -107,33 +107,34 @@
 
   <div id="ultimaActualizacion"></div>
 
-  <script>
-    let stockLocal = [];
+  <!-- Todo el contenido es igual excepto esto dentro del script -->
+<script>
+let stockLocal = [];
 
-    async function actualizarStock() {
-      document.getElementById('spinner').style.display = 'block';
-      try {
-        const res = await fetch('https://script.google.com/macros/s/AKfycbz2l87fXmnZ89IX_PH6X1o4guwc2AxTKv9HNlQrr6g33LWXoN3nYrKS0ndnApSVtbEEug/exec?todos=true');
-        const datos = await res.json();
+async function actualizarStock() {
+  document.getElementById('spinner').style.display = 'block';
+  try {
+    const res = await fetch('https://script.google.com/macros/s/AKfycbz2l87fXmnZ89IX_PH6X1o4guwc2AxTKv9HNlQrr6g33LWXoN3nYrKS0ndnApSVtbEEug/exec?todos=true');
+    const datos = await res.json();
 
-        if (!Array.isArray(datos)) {
-          alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
-          return;
-        }
-
-        stockLocal = datos;
-        localStorage.setItem("stock", JSON.stringify(datos));
-        const fecha = new Date().toLocaleString();
-        localStorage.setItem("ultimaActualizacion", fecha);
-        document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
-        alert("✅ Stock actualizado correctamente.");
-      } catch (e) {
-        alert("❌ Error al actualizar el stock. Verificá tu conexión.");
-        console.error(e);
-      } finally {
-        document.getElementById('spinner').style.display = 'none';
-      }
+    if (!Array.isArray(datos)) {
+      alert("⚠ No se pudo actualizar el stock (respuesta vacía).");
+      return;
     }
+
+    stockLocal = datos;
+    localStorage.setItem("stock", JSON.stringify(datos));
+    const fecha = new Date().toLocaleString();
+    localStorage.setItem("ultimaActualizacion", fecha);
+    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
+    alert("✅ Stock actualizado correctamente.");
+  } catch (e) {
+    alert("❌ Error al actualizar el stock. Verificá tu conexión.");
+    console.error(e);
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+  }
+}
 
 async function buscarAnteojo() {
   const input = document.getElementById('codigo');
@@ -151,8 +152,6 @@ async function buscarAnteojo() {
 
   const palabras = codigo.split(/\s+/);
   const tbody = document.getElementById('contenido');
-
-  // Guardar seleccionados existentes
   const seleccionados = new Set();
   const filasPrevias = Array.from(tbody.querySelectorAll("tr"));
 
@@ -161,7 +160,6 @@ async function buscarAnteojo() {
     if (checkbox?.checked) {
       seleccionados.add(checkbox.dataset.id);
     } else if (avanzada) {
-      // borrar si no está seleccionado solo en avanzada
       fila.remove();
     }
   });
@@ -186,7 +184,7 @@ async function buscarAnteojo() {
     alert("No se encontró ningún resultado");
   } else {
     resultados.forEach(fila => {
-      if (seleccionados.has(fila[0])) return; // ya está tildado y en pantalla
+      if (seleccionados.has(fila[0])) return;
 
       const tr = document.createElement('tr');
       const checkbox = document.createElement('input');
@@ -201,7 +199,7 @@ async function buscarAnteojo() {
       const indicesAMostrar = [0,1,2,3,4,5,6,7,9,10,11];
       indicesAMostrar.forEach(i => {
         const td = document.createElement('td');
-        td.textContent = fila[i] || '';
+        td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
         tr.appendChild(td);
       });
 
@@ -211,46 +209,45 @@ async function buscarAnteojo() {
     document.getElementById('resultado').style.display = 'block';
   }
 
-  // NO borramos el valor del input ahora
   document.getElementById('spinner').style.display = 'none';
   const tiempo = (performance.now() - inicio).toFixed(2);
   document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
 }
 
+function limpiar() {
+  document.getElementById('codigo').value = '';
+  document.getElementById('contenido').innerHTML = '';
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('tiempoBusqueda').textContent = '';
+  document.getElementById('codigo').focus();
+}
 
-    function limpiar() {
-      document.getElementById('codigo').value = '';
-      document.getElementById('contenido').innerHTML = '';
-      document.getElementById('resultado').style.display = 'none';
-      document.getElementById('spinner').style.display = 'none';
-      document.getElementById('tiempoBusqueda').textContent = '';
-      document.getElementById('codigo').focus();
+window.onload = () => {
+  document.getElementById('codigo').focus();
+  const ultima = localStorage.getItem("ultimaActualizacion");
+  const stockGuardado = localStorage.getItem("stock");
+
+  if (ultima) {
+    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
+  }
+
+  if (stockGuardado) {
+    try {
+      stockLocal = JSON.parse(stockGuardado);
+    } catch (e) {
+      console.error("Error leyendo el stock guardado:", e);
     }
+  }
 
-    window.onload = () => {
-      document.getElementById('codigo').focus();
-      const ultima = localStorage.getItem("ultimaActualizacion");
-      const stockGuardado = localStorage.getItem("stock");
+  document.getElementById("codigo").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      buscarAnteojo();
+    }
+  });
+};
+</script>
 
-      if (ultima) {
-        document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
-      }
-
-      if (stockGuardado) {
-        try {
-          stockLocal = JSON.parse(stockGuardado);
-        } catch (e) {
-          console.error("Error leyendo el stock guardado:", e);
-        }
-      }
-
-      document.getElementById("codigo").addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          buscarAnteojo();
-        }
-      });
-    };
-  </script>
 </body>
 </html>
