@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock Anteojos sol y receta</title>
+  <title>Stock anteojos</title>
   <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
@@ -39,6 +39,11 @@
     th, td {
       padding: 10px;
       border: 1px solid #ccc;
+      cursor: pointer;
+    }
+
+    th:hover {
+      background-color: #f0f0f0;
     }
 
     #resultado {
@@ -53,10 +58,17 @@
       padding-right: 20px;
     }
 
-    #tiempoBusqueda {
+    #tiempoBusqueda,
+    #cantidadResultados {
       font-size: 12px;
       color: #888;
       margin-top: 5px;
+    }
+
+    #cantidadResultados {
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: bold;
     }
 
     #busquedaAvanzadaLabel {
@@ -67,49 +79,51 @@
 </head>
 <body>
 
-  <h2>
-        Número de anteojo
-  </h2>
+<h2>
+  <img src="rayban.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
+  Número de anteojo
+</h2>
 
-  <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
-  <label id="busquedaAvanzadaLabel">
-    <input type="checkbox" id="busquedaAvanzada" />
-    Búsqueda avanzada
-  </label>
-  <br>
-  <button onclick="buscarAnteojo()">Buscar</button>
-  <button onclick="limpiar()">Limpiar</button>
-  <button onclick="actualizarStock()">Actualizar stock</button>
+<input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
+<label id="busquedaAvanzadaLabel">
+  <input type="checkbox" id="busquedaAvanzada" />
+  Búsqueda avanzada
+</label><br>
+<button onclick="buscarAnteojo()">Buscar</button>
+<button onclick="limpiar()">Limpiar</button>
+<button onclick="actualizarStock()">Actualizar stock</button>
 
-  <div id="spinner">🔍 Buscando anteojo...</div>
-  <div id="resultado">
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th>N° ANT</th>
-          <th>MARCA</th>
-          <th>MODELO</th>
-          <th>COLOR</th>
-          <th>ARMAZÓN</th>
-          <th>CALIBRE</th>
-          <th>COLOR CRISTAL</th>
-          <th>FAMILIA</th>
-          <th>PRECIO</th>
-          <th>FECHA DE VENTA</th>
-          <th>VENDEDOR</th>
-          <th>FECHA DE INGRESO</th> <!-- ✅ Nueva columna -->
-        </tr>
-      </thead>
-      <tbody id="contenido"></tbody>
-    </table>
-    <div id="tiempoBusqueda"></div>
-  </div>
+<div id="spinner">🔍 Buscando anteojo...</div>
+<div id="cantidadResultados"></div>
 
-  <div id="ultimaActualizacion"></div>
+<div id="resultado">
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th onclick="ordenarPor(0)">N° ANT</th>
+        <th onclick="ordenarPor(1)">MARCA</th>
+        <th onclick="ordenarPor(2)">MODELO</th>
+        <th onclick="ordenarPor(3)">COLOR</th>
+        <th onclick="ordenarPor(4)">ARMAZÓN</th>
+        <th onclick="ordenarPor(5)">CALIBRE</th>
+        <th onclick="ordenarPor(6)">COLOR CRISTAL</th>
+        <th onclick="ordenarPor(7)">FAMILIA</th>
+        <th onclick="ordenarPor(8)">PRECIO</th>
+        <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
+        <th onclick="ordenarPor(10)">VENDEDOR</th>
+      </tr>
+    </thead>
+    <tbody id="contenido"></tbody>
+  </table>
+  <div id="tiempoBusqueda"></div>
+</div>
+
+<div id="ultimaActualizacion"></div>
 
 <script>
 let stockLocal = [];
+let ordenAsc = true;
 
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
@@ -118,13 +132,13 @@ async function actualizarStock() {
     const datos = await res.json();
 
     if (!Array.isArray(datos)) {
-      Swal.fire("⚠ Error", "No se pudo actualizar el stock.", "error");
+      Swal.fire("⚠ No se pudo actualizar el stock");
       return;
     }
 
     stockLocal = datos;
-    const fecha = new Date().toLocaleString();
     localStorage.setItem("stock", JSON.stringify(datos));
+    const fecha = new Date().toLocaleString();
     localStorage.setItem("ultimaActualizacion", fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
 
@@ -132,15 +146,31 @@ async function actualizarStock() {
       icon: 'success',
       title: 'Stock actualizado',
       showConfirmButton: false,
-      timer: 1200
+      timer: 1000
     });
 
   } catch (e) {
-    Swal.fire("❌ Error", "No se pudo conectar con la base de datos.", "error");
+    Swal.fire("❌ Error al actualizar el stock");
     console.error(e);
   } finally {
     document.getElementById('spinner').style.display = 'none';
   }
+}
+
+function ordenarPor(indice) {
+  const tbody = document.getElementById('contenido');
+  const filas = Array.from(tbody.querySelectorAll("tr"));
+  filas.sort((a, b) => {
+    const valA = a.children[indice + 1].textContent.trim();
+    const valB = b.children[indice + 1].textContent.trim();
+    if (!isNaN(valA) && !isNaN(valB)) {
+      return ordenAsc ? valA - valB : valB - valA;
+    } else {
+      return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+  });
+  ordenAsc = !ordenAsc;
+  filas.forEach(fila => tbody.appendChild(fila));
 }
 
 async function buscarAnteojo() {
@@ -150,9 +180,10 @@ async function buscarAnteojo() {
   const inicio = performance.now();
   document.getElementById('spinner').style.display = 'block';
   document.getElementById('tiempoBusqueda').textContent = '';
+  document.getElementById('cantidadResultados').textContent = '';
 
   if (!codigo) {
-    Swal.fire("🔎", "Ingresá un número o palabras clave", "info");
+    Swal.fire("Ingresá un número o palabras clave");
     document.getElementById('spinner').style.display = 'none';
     return;
   }
@@ -187,8 +218,10 @@ async function buscarAnteojo() {
     }
   }
 
+  let nuevos = 0;
+
   if (resultados.length === 0) {
-    Swal.fire("Sin resultados", "No se encontró ningún resultado", "warning");
+    Swal.fire("No se encontró ningún resultado");
   } else {
     resultados.forEach(fila => {
       if (seleccionados.has(fila[0])) return;
@@ -203,17 +236,18 @@ async function buscarAnteojo() {
       tdCheck.appendChild(checkbox);
       tr.appendChild(tdCheck);
 
-      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9]; // ✅ nota el 9 al final (fecha ingreso)
-      indicesAMostrar.forEach(i => {
+      for (let i = 0; i <= 10; i++) {
         const td = document.createElement('td');
-        td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
+        td.textContent = fila[i] && fila[i] !== "" ? fila[i] : '-';
         tr.appendChild(td);
-      });
+      }
 
       tbody.appendChild(tr);
+      nuevos++;
     });
 
     document.getElementById('resultado').style.display = 'block';
+    document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${nuevos} nuevos resultados.`;
   }
 
   document.getElementById('spinner').style.display = 'none';
@@ -227,6 +261,7 @@ function limpiar() {
   document.getElementById('resultado').style.display = 'none';
   document.getElementById('spinner').style.display = 'none';
   document.getElementById('tiempoBusqueda').textContent = '';
+  document.getElementById('cantidadResultados').textContent = '';
   document.getElementById('codigo').focus();
 }
 
@@ -255,6 +290,5 @@ window.onload = () => {
   });
 };
 </script>
-
 </body>
 </html>
