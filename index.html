@@ -292,6 +292,25 @@ window.onload = () => {
     }
   });
 };
+
+// Actualización automática diaria a las 9:05 AM
+setInterval(() => {
+  const ahora = new Date();
+  const horas = ahora.getHours();
+  const minutos = ahora.getMinutes();
+  const segundos = ahora.getSeconds();
+
+  const yaActualizado = sessionStorage.getItem("stockActualizadoHoy");
+
+  if (horas === 9 && minutos === 5 && segundos < 10 && !yaActualizado) {
+    actualizarStock().then(() => {
+      const ahoraStr = new Date().toLocaleString();
+      document.getElementById("ultimaActualizacion").textContent =
+        "🔄 Stock actualizado automáticamente: " + ahoraStr;
+      sessionStorage.setItem("stockActualizadoHoy", "true");
+    });
+  }
+}, 10000); // Verifica cada 10 segundos
 </script>
 
 </body>
