@@ -11,7 +11,36 @@
       font-family: Arial, sans-serif;
       background: #f5f5f5;
       padding: 20px;
+      margin: 0;
       text-align: center;
+    }
+
+    body.modoOscuro {
+      background-color: #000;
+      background-image: url('https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif');
+      background-size: cover;
+      color: #00ff00;
+    }
+
+    body.modoOscuro h2,
+    body.modoOscuro th,
+    body.modoOscuro td,
+    body.modoOscuro label,
+    body.modoOscuro button {
+      color: #00ff00;
+      text-shadow: 0 0 5px #0f0;
+    }
+
+    body.modoOscuro table {
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 1px solid #0f0;
+    }
+
+    body.modoOscuro input,
+    body.modoOscuro button {
+      background-color: #111;
+      color: #0f0;
+      border: 1px solid #0f0;
     }
 
     input, button {
@@ -27,37 +56,31 @@
       margin-top: 20px;
     }
 
+    .tabla-responsive {
+      overflow-x: auto;
+      width: 100%;
+    }
+
     table {
       margin: 20px auto;
       border-collapse: collapse;
-      width: 95%;
-      max-width: 1000px;
+      width: 100%;
       background: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
     th, td {
-      padding: 8px 6px;
+      padding: 8px;
       border: 1px solid #ccc;
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
-      white-space: nowrap;
+      word-break: break-word;
     }
 
-    /* Ajustes especiales por columna */
-    th:nth-child(12), td:nth-child(12),  /* VENDEDOR */
-    th:nth-child(13), td:nth-child(13) { /* FECHA DE INGRESO */
-      font-size: 12px;
-    }
-
-    td:nth-child(12) {
-      min-width: 70px;
-    }
-
-    td:nth-child(13),
-    td:nth-child(11) {
-      font-size: 12px;
-      min-width: 90px;
+    td:nth-child(5),
+    td:nth-child(6),
+    td:nth-child(7) {
+      white-space: normal; /* Permitir salto de línea */
     }
 
     th:hover {
@@ -93,12 +116,25 @@
       font-size: 14px;
       color: #333;
     }
+
+    @media screen and (max-width: 768px) {
+      th, td {
+        font-size: 12px;
+        padding: 6px 4px;
+      }
+
+      td:nth-child(12),
+      td:nth-child(13),
+      td:nth-child(11) {
+        font-size: 11px;
+      }
+    }
   </style>
 </head>
 <body>
 
-<h2>
-  <img src="logo_muy_chico_sinfondo.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
+<h2 id="tituloPrincipal">
+  <img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
   Número de anteojo
 </h2>
 
@@ -114,23 +150,23 @@
 <div id="spinner">🔍 Buscando anteojo...</div>
 <div id="cantidadResultados"></div>
 
-<div id="resultado">
+<div id="resultado" class="tabla-responsive">
   <table>
     <thead>
       <tr>
         <th></th>
-        <th onclick="ordenarPor(0)">N° ANT</th>
-        <th onclick="ordenarPor(1)">MARCA</th>
-        <th onclick="ordenarPor(2)">MODELO</th>
-        <th onclick="ordenarPor(3)">COLOR</th>
-        <th onclick="ordenarPor(4)">ARMAZÓN</th>
-        <th onclick="ordenarPor(5)">CALIBRE</th>
-        <th onclick="ordenarPor(6)">COLOR CRISTAL</th>
-        <th onclick="ordenarPor(7)">FAMILIA</th>
-        <th onclick="ordenarPor(8)">PRECIO</th>
-        <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
-        <th onclick="ordenarPor(10)">VENDEDOR</th>
-        <th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
+        <th>N° ANT</th>
+        <th>MARCA</th>
+        <th>MODELO</th>
+        <th>COLOR</th>
+        <th>ARMAZÓN</th>
+        <th>CALIBRE</th>
+        <th>COLOR CRISTAL</th>
+        <th>FAMILIA</th>
+        <th>PRECIO</th>
+        <th>FECHA DE VENTA</th>
+        <th>VENDEDOR</th>
+        <th>FECHA DE INGRESO</th>
       </tr>
     </thead>
     <tbody id="contenido"></tbody>
@@ -176,22 +212,6 @@ async function actualizarStock() {
   }
 }
 
-function ordenarPor(indice) {
-  const tbody = document.getElementById('contenido');
-  const filas = Array.from(tbody.querySelectorAll("tr"));
-  filas.sort((a, b) => {
-    const valA = a.children[indice + 1].textContent.trim();
-    const valB = b.children[indice + 1].textContent.trim();
-    if (!isNaN(valA) && !isNaN(valB)) {
-      return ordenAsc ? valA - valB : valB - valA;
-    } else {
-      return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
-  });
-  ordenAsc = !ordenAsc;
-  filas.forEach(fila => tbody.appendChild(fila));
-}
-
 async function buscarAnteojo() {
   const input = document.getElementById('codigo');
   const codigo = input.value.trim().toLowerCase();
@@ -224,17 +244,15 @@ async function buscarAnteojo() {
   let resultados = [];
 
   if (Array.isArray(stockLocal) && stockLocal.length > 0) {
-    if (avanzada) {
-      resultados = stockLocal.filter((fila, index) => {
-        if (index === 0) return false;
+    resultados = stockLocal.filter((fila, index) => {
+      if (index === 0) return false;
+      if (avanzada) {
         const filaTexto = fila.join(" ").toLowerCase();
-        return palabras.every(palabra => filaTexto.includes(palabra));
-      });
-    } else {
-      resultados = stockLocal.filter((fila, index) => {
-        return index !== 0 && Number(fila[0]) === Number(codigo);
-      });
-    }
+        return palabras.every(p => filaTexto.includes(p));
+      } else {
+        return Number(fila[0]) === Number(codigo);
+      }
+    });
   }
 
   let nuevos = 0;
@@ -311,6 +329,18 @@ window.onload = () => {
     }
   }
 
+  // Cambio visual al activar/desactivar búsqueda avanzada
+  document.getElementById('busquedaAvanzada').addEventListener('change', function () {
+    const titulo = document.getElementById('tituloPrincipal');
+    if (this.checked) {
+      titulo.innerHTML = '<img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height: 24px; vertical-align: middle; margin-right: 8px;" />Detalle de anteojo';
+      document.body.classList.add('modoOscuro');
+    } else {
+      titulo.innerHTML = '<img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height: 24px; vertical-align: middle; margin-right: 8px;" />Número de anteojo';
+      document.body.classList.remove('modoOscuro');
+    }
+  });
+
   document.getElementById("codigo").addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -319,6 +349,7 @@ window.onload = () => {
   });
 };
 
+// Auto actualización 9:05 am
 setInterval(() => {
   const ahora = new Date();
   const horas = ahora.getHours();
