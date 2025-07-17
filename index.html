@@ -241,10 +241,10 @@ async function buscarAnteojo() {
 
       indicesAMostrar.forEach(i => {
         const td = document.createElement('td');
-        if (i === 9 && fila[i]) {
+        if ((i === 9 || i === 10) && fila[i]) {
           const fecha = new Date(fila[i]);
-          const dia = fecha.getDate();
-          const mes = fecha.getMonth() + 1;
+          const dia = String(fecha.getDate()).padStart(2, '0');
+          const mes = String(fecha.getMonth() + 1).padStart(2, '0');
           const anio = fecha.getFullYear();
           td.textContent = `${dia}-${mes}-${anio}`;
         } else {
