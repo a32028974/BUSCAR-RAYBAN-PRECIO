@@ -237,11 +237,19 @@ async function buscarAnteojo() {
       tdCheck.appendChild(checkbox);
       tr.appendChild(tdCheck);
 
-      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9]; // el 9 (fecha ingreso) al final
+      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9];
 
       indicesAMostrar.forEach(i => {
         const td = document.createElement('td');
-        td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
+        if (i === 9 && fila[i]) {
+          const fecha = new Date(fila[i]);
+          const dia = fecha.getDate();
+          const mes = fecha.getMonth() + 1;
+          const anio = fecha.getFullYear();
+          td.textContent = `${dia}-${mes}-${anio}`;
+        } else {
+          td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
+        }
         tr.appendChild(td);
       });
 
@@ -293,7 +301,6 @@ window.onload = () => {
   });
 };
 
-// Actualización automática diaria a las 9:05 AM
 setInterval(() => {
   const ahora = new Date();
   const horas = ahora.getHours();
@@ -310,7 +317,7 @@ setInterval(() => {
       sessionStorage.setItem("stockActualizadoHoy", "true");
     });
   }
-}, 10000); // Verifica cada 10 segundos
+}, 10000);
 </script>
 
 </body>
