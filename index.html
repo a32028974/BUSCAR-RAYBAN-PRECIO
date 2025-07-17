@@ -37,9 +37,27 @@
     }
 
     th, td {
-      padding: 10px;
+      padding: 8px 6px;
       border: 1px solid #ccc;
-      cursor: pointer;
+      font-size: 14px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* Ajustes especiales por columna */
+    th:nth-child(12), td:nth-child(12),  /* VENDEDOR */
+    th:nth-child(13), td:nth-child(13) { /* FECHA DE INGRESO */
+      font-size: 12px;
+    }
+
+    td:nth-child(12) {
+      min-width: 70px;
+    }
+
+    td:nth-child(13),
+    td:nth-child(11) {
+      font-size: 12px;
+      min-width: 90px;
     }
 
     th:hover {
