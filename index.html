@@ -12,7 +12,6 @@
       background: #f5f5f5;
       padding: 20px;
       text-align: center;
-      margin: 0;
     }
 
     input, button {
@@ -21,43 +20,26 @@
       font-size: 16px;
     }
 
+    #spinner {
+      display: none;
+      font-size: 18px;
+      color: #444;
+      margin-top: 20px;
+    }
+
     table {
       margin: 20px auto;
       border-collapse: collapse;
-      width: 100%;
-      max-width: 100%;
-      table-layout: fixed;
+      width: 95%;
+      max-width: 1000px;
       background: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      word-wrap: break-word;
     }
 
     th, td {
-      padding: 8px 6px;
+      padding: 10px;
       border: 1px solid #ccc;
-      font-size: 14px;
-      text-align: center;
-      white-space: normal;
-    }
-
-    td:nth-child(5),
-    td:nth-child(6),
-    td:nth-child(7) {
-      min-width: 90px;
-      max-width: 33%;
-    }
-
-    td:nth-child(11),
-    td:nth-child(13) {
-      min-width: 60px;
-      max-width: 80px;
-      font-size: 13px;
-    }
-
-    td:nth-child(12) {
-      min-width: 60px;
-      max-width: 80px;
-      font-size: 13px;
+      cursor: pointer;
     }
 
     th:hover {
@@ -111,6 +93,7 @@
 <button onclick="limpiar()">Limpiar</button>
 <button onclick="actualizarStock()">Actualizar stock</button>
 
+<div id="spinner">🔍 Buscando anteojo...</div>
 <div id="cantidadResultados"></div>
 
 <div id="resultado">
@@ -118,7 +101,7 @@
     <thead>
       <tr>
         <th></th>
-        <th onclick="ordenarPor(0)">Nº ANT</th>
+        <th onclick="ordenarPor(0)">N° ANT</th>
         <th onclick="ordenarPor(1)">MARCA</th>
         <th onclick="ordenarPor(2)">MODELO</th>
         <th onclick="ordenarPor(3)">COLOR</th>
@@ -144,13 +127,7 @@ let stockLocal = [];
 let ordenAsc = true;
 
 async function actualizarStock() {
-  Swal.fire({
-    title: 'Actualizando stock...',
-    html: 'Por favor esperá',
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
-  });
-
+  document.getElementById('spinner').style.display = 'block';
   try {
     const res = await fetch('https://script.google.com/macros/s/AKfycbwTRGt2r_BiG-d_YM59jcOapADtr01o1PABD4QUT-br12Kw87--BVWwi4FF1pmcPIPHCw/exec?todos=true');
     const datos = await res.json();
@@ -166,11 +143,18 @@ async function actualizarStock() {
     localStorage.setItem("ultimaActualizacion", fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
 
-    Swal.fire({ icon: 'success', title: 'Stock actualizado', showConfirmButton: false, timer: 1000 });
+    Swal.fire({
+      icon: 'success',
+      title: 'Stock actualizado',
+      showConfirmButton: false,
+      timer: 1000
+    });
 
   } catch (e) {
     Swal.fire("❌ Error al actualizar el stock");
     console.error(e);
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
   }
 }
 
@@ -195,19 +179,13 @@ async function buscarAnteojo() {
   const codigo = input.value.trim().toLowerCase();
   const avanzada = document.getElementById('busquedaAvanzada').checked;
   const inicio = performance.now();
-
-  Swal.fire({
-    title: 'Buscando anteojo...',
-    html: 'Filtrando datos locales...',
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
-  });
-
+  document.getElementById('spinner').style.display = 'block';
   document.getElementById('tiempoBusqueda').textContent = '';
   document.getElementById('cantidadResultados').textContent = '';
 
   if (!codigo) {
     Swal.fire("Ingresá un número o palabras clave");
+    document.getElementById('spinner').style.display = 'none';
     return;
   }
 
@@ -283,7 +261,7 @@ async function buscarAnteojo() {
     document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${nuevos} nuevos resultados.`;
   }
 
-  Swal.close();
+  document.getElementById('spinner').style.display = 'none';
   const tiempo = (performance.now() - inicio).toFixed(2);
   document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
 }
@@ -292,6 +270,7 @@ function limpiar() {
   document.getElementById('codigo').value = '';
   document.getElementById('contenido').innerHTML = '';
   document.getElementById('resultado').style.display = 'none';
+  document.getElementById('spinner').style.display = 'none';
   document.getElementById('tiempoBusqueda').textContent = '';
   document.getElementById('cantidadResultados').textContent = '';
   document.getElementById('codigo').focus();
