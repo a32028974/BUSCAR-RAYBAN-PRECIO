@@ -129,7 +129,7 @@ let ordenAsc = true;
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
   try {
-    const res = await fetch('https://script.google.com/macros/s/AKfycbwTRGt2r_BiG-d_YM59jcOapADtr01o1PABD4QUT-br12Kw87--BVWwi4FF1pmcPIPHCw/exec?todos=true');
+    const res = await fetch('https://script.google.com/macros/s/AKfycbz777LNNqDGop1P7v2ERF5MLf_tuNnl6Mlwb7LwBI9oRP_mrEYV7TPTFUXU3iSjIDwiAA/exec?todos=true');
     const datos = await res.json();
 
     if (!Array.isArray(datos)) {
