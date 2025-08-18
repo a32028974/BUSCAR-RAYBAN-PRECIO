@@ -123,13 +123,34 @@
 <div id="ultimaActualizacion"></div>
 
 <script>
+const API = 'https://script.google.com/macros/s/AKfycbz777LNNqDGop1P7v2ERF5MLf_tuNnl6Mlwb7LwBI9oRP_mrEYV7TPTFUXU3iSjIDwiAA/exec';
+
 let stockLocal = [];
 let ordenAsc = true;
+
+function parseFechaFlexible(v) {
+  if (!v) return '';
+  // Si ya es Date o ISO, Date lo entiende
+  let d = new Date(v);
+  if (!isNaN(d)) {
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    return `${dd}-${mm}-${yy}`;
+  }
+  // Si viene como dd/MM/yy (texto)
+  if (typeof v === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(v)) {
+    const [dd, mm, yy] = v.split('/');
+    const full = (yy.length === 2) ? ('20' + yy) : yy;
+    return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${full}`;
+  }
+  return String(v);
+}
 
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
   try {
-    const res = await fetch('https://script.google.com/macros/s/AKfycbz777LNNqDGop1P7v2ERF5MLf_tuNnl6Mlwb7LwBI9oRP_mrEYV7TPTFUXU3iSjIDwiAA/exec?todos=true');
+    const res = await fetch(`${API}?todos=true`);
     const datos = await res.json();
 
     if (!Array.isArray(datos)) {
@@ -143,13 +164,7 @@ async function actualizarStock() {
     localStorage.setItem("ultimaActualizacion", fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
 
-    Swal.fire({
-      icon: 'success',
-      title: 'Stock actualizado',
-      showConfirmButton: false,
-      timer: 1000
-    });
-
+    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer: 1000 });
   } catch (e) {
     Swal.fire("❌ Error al actualizar el stock");
     console.error(e);
@@ -164,8 +179,10 @@ function ordenarPor(indice) {
   filas.sort((a, b) => {
     const valA = a.children[indice + 1].textContent.trim();
     const valB = b.children[indice + 1].textContent.trim();
-    if (!isNaN(valA) && !isNaN(valB)) {
-      return ordenAsc ? valA - valB : valB - valA;
+    const numA = Number(valA.replace(/[^0-9.-]/g,''));
+    const numB = Number(valB.replace(/[^0-9.-]/g,''));
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return ordenAsc ? numA - numB : numB - numA;
     } else {
       return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
@@ -176,7 +193,7 @@ function ordenarPor(indice) {
 
 async function buscarAnteojo() {
   const input = document.getElementById('codigo');
-  const codigo = input.value.trim().toLowerCase();
+  const codigo = input.value.trim();
   const avanzada = document.getElementById('busquedaAvanzada').checked;
   const inicio = performance.now();
   document.getElementById('spinner').style.display = 'block';
@@ -189,33 +206,29 @@ async function buscarAnteojo() {
     return;
   }
 
-  const palabras = codigo.split(/\s+/);
   const tbody = document.getElementById('contenido');
   const seleccionados = new Set();
-  const filasPrevias = Array.from(tbody.querySelectorAll("tr"));
-
-  filasPrevias.forEach(fila => {
+  Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
     const checkbox = fila.querySelector("input[type='checkbox']");
-    if (checkbox?.checked) {
-      seleccionados.add(checkbox.dataset.id);
-    } else if (avanzada) {
-      fila.remove();
-    }
+    if (checkbox?.checked) seleccionados.add(checkbox.dataset.id);
+    else if (avanzada) fila.remove();
   });
 
   let resultados = [];
 
-  if (Array.isArray(stockLocal) && stockLocal.length > 0) {
-    if (avanzada) {
-      resultados = stockLocal.filter((fila, index) => {
-        if (index === 0) return false;
-        const filaTexto = fila.join(" ").toLowerCase();
-        return palabras.every(palabra => filaTexto.includes(palabra));
-      });
-    } else {
-      resultados = stockLocal.filter((fila, index) => {
-        return index !== 0 && Number(fila[0]) === Number(codigo);
-      });
+  // 1) si hay stock cacheado y la búsqueda es simple por N°, filtramos local
+  if (!avanzada && Array.isArray(stockLocal) && stockLocal.length > 0 && /^\d+$/.test(codigo)) {
+    resultados = stockLocal.filter((fila) => Number(fila[0]) === Number(codigo));
+  }
+
+  // 2) si no hay resultados locales, consultamos al endpoint directo
+  if (resultados.length === 0) {
+    try {
+      const res = await fetch(`${API}?codigo=${encodeURIComponent(codigo)}`);
+      const datos = await res.json();
+      if (Array.isArray(datos)) resultados = datos;
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -237,16 +250,13 @@ async function buscarAnteojo() {
       tdCheck.appendChild(checkbox);
       tr.appendChild(tdCheck);
 
+      // Orden que ya usabas: [0,1,2,3,4,5,6,7,8,10,11,9]
       const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9];
 
       indicesAMostrar.forEach(i => {
         const td = document.createElement('td');
-        if ((i === 9 || i === 10) && fila[i]) {
-          const fecha = new Date(fila[i]);
-          const dia = String(fecha.getDate()).padStart(2, '0');
-          const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-          const anio = fecha.getFullYear();
-          td.textContent = `${dia}-${mes}-${anio}`;
+        if (i === 10) { // FECHA_VENTA en tu estructura
+          td.textContent = parseFechaFlexible(fila[i]) || '-';
         } else {
           td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
         }
@@ -286,11 +296,7 @@ window.onload = () => {
   }
 
   if (stockGuardado) {
-    try {
-      stockLocal = JSON.parse(stockGuardado);
-    } catch (e) {
-      console.error("Error leyendo el stock guardado:", e);
-    }
+    try { stockLocal = JSON.parse(stockGuardado); } catch {}
   }
 
   document.getElementById("codigo").addEventListener("keydown", function(event) {
@@ -301,12 +307,12 @@ window.onload = () => {
   });
 };
 
+// Auto-actualización diaria opcional (09:05)
 setInterval(() => {
   const ahora = new Date();
   const horas = ahora.getHours();
   const minutos = ahora.getMinutes();
   const segundos = ahora.getSeconds();
-
   const yaActualizado = sessionStorage.getItem("stockActualizadoHoy");
 
   if (horas === 9 && minutos === 5 && segundos < 10 && !yaActualizado) {
@@ -319,6 +325,7 @@ setInterval(() => {
   }
 }, 10000);
 </script>
+
 
 </body>
 </html>
