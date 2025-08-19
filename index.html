@@ -1,272 +1,84 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock anteojos</title>
-  <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    body{font-family:Arial, sans-serif;background:#f5f5f5;padding:20px;text-align:center}
-    input,button{padding:10px;margin:10px;font-size:16px}
-    #spinner{display:none;font-size:18px;color:#444;margin-top:20px}
-    table{margin:20px auto;border-collapse:collapse;width:95%;max-width:1100px;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
-    th,td{padding:10px;border:1px solid #ccc}
-    th{cursor:pointer}
-    th:hover{background:#f0f0f0}
-    #resultado{display:none}
-    #ultimaActualizacion{margin-top:10px;font-size:14px;color:#666;text-align:right;padding-right:20px}
-    #tiempoBusqueda,#cantidadResultados{font-size:12px;color:#888;margin-top:5px}
-    #cantidadResultados{margin-top:10px;font-size:13px;font-weight:bold}
-    #busquedaAvanzadaLabel{font-size:14px;color:#333}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stock anteojos</title>
+<link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+body{font-family:Arial, sans-serif;background:#f5f5f5;padding:20px;text-align:center}
+input,button{padding:10px;margin:10px;font-size:16px}
+#spinner{display:none;font-size:18px;color:#444;margin-top:20px}
+table{margin:20px auto;border-collapse:collapse;width:95%;max-width:1100px;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
+th,td{padding:10px;border:1px solid #ccc}
+th{cursor:pointer}
+th:hover{background:#f0f0f0}
+#resultado{display:none}
+#ultimaActualizacion{margin-top:10px;font-size:14px;color:#666;text-align:right;padding-right:20px}
+#tiempoBusqueda,#cantidadResultados{font-size:12px;color:#888;margin-top:5px}
+#cantidadResultados{margin-top:10px;font-size:13px;font-weight:bold}
+#busquedaAvanzadaLabel{font-size:14px;color:#333}
+</style>
 </head>
 <body>
 
+
 <h2>
-  <img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height:24px;vertical-align:middle;margin-right:8px;">
-  Número de anteojo V17.54
+<img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height:24px;vertical-align:middle;margin-right:8px;">
+Número de anteojo
 </h2>
+
 
 <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
 <label id="busquedaAvanzadaLabel">
-  <input type="checkbox" id="busquedaAvanzada" />
-  Búsqueda avanzada
+<input type="checkbox" id="busquedaAvanzada" />
+Búsqueda avanzada
 </label><br>
 <button onclick="buscarAnteojo()">Buscar</button>
 <button onclick="limpiar()">Limpiar</button>
 <button onclick="actualizarStock()">Actualizar stock</button>
 
+
 <div id="spinner">🔍 Buscando...</div>
 <div id="cantidadResultados"></div>
 
+
 <div id="resultado">
-  <table>
-    <thead>
-      <tr>
-        <th></th>
-        <th onclick="ordenarPor(0)">N° ANT</th>
-        <th onclick="ordenarPor(1)">MARCA</th>
-        <th onclick="ordenarPor(2)">MODELO</th>
-        <th onclick="ordenarPor(3)">COLOR</th>
-        <th onclick="ordenarPor(4)">ARMAZÓN</th>
-        <th onclick="ordenarPor(5)">CALIBRE</th>
-        <th onclick="ordenarPor(6)">COLOR CRISTAL</th>
-        <th onclick="ordenarPor(7)">FAMILIA</th>
-        <th onclick="ordenarPor(8)">PRECIO</th>
-        <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
-        <th onclick="ordenarPor(10)">VENDEDOR</th>
-        <th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
-      </tr>
-    </thead>
-    <tbody id="contenido"></tbody>
-  </table>
-  <div id="tiempoBusqueda"></div>
+<table>
+<thead>
+<tr>
+<th></th>
+<th onclick="ordenarPor(0)">N° ANT</th>
+<th onclick="ordenarPor(1)">MARCA</th>
+<th onclick="ordenarPor(2)">MODELO</th>
+<th onclick="ordenarPor(3)">COLOR</th>
+<th onclick="ordenarPor(4)">ARMAZÓN</th>
+<th onclick="ordenarPor(5)">CALIBRE</th>
+<th onclick="ordenarPor(6)">COLOR CRISTAL</th>
+<th onclick="ordenarPor(7)">FAMILIA</th>
+<th onclick="ordenarPor(8)">PRECIO</th>
+<th onclick="ordenarPor(9)">FECHA DE VENTA</th>
+<th onclick="ordenarPor(10)">VENDEDOR</th>
+<th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
+</tr>
+</thead>
+<tbody id="contenido"></tbody>
+</table>
+<div id="tiempoBusqueda"></div>
 </div>
+
 
 <div id="ultimaActualizacion"></div>
 
+
 <script>
-/** URL de tu App Script */
+/** URL de tu App Script (la NUEVA) */
 const API = 'https://script.google.com/macros/s/AKfycby6SzAgXhtctDbYEGETB6Ku8X_atugp7Mld5QvimnDpXMmHU9IxW9XRqDkRI0rGONr85Q/exec';
 
-/** Claves EXACTAS del Sheet y orden visual */
-const COL_KEYS = [
-  'N ANTEOJO',
-  'MARCA',
-  'MODELO',
-  'COLOR',
-  'ARMAZON',         // en la UI mostramos "ARMAZÓN"
-  'CALIBRE',
-  'CRISTAL',         // en la UI "COLOR CRISTAL"
-  'FAMILIA',
-  'PRECIO PUBLICO',  // en la UI "PRECIO"
-  'FECHA DE VENTA',
-  'VENDEDOR',
-  'FECHA INGRESO'
-];
 
-let stockLocal = [];   // objetos por encabezado
-let ordenAsc = true;
-
-const norm = s => String(s ?? '').trim();
-
-/** Descarga todo (rows por encabezado) */
-async function actualizarStock() {
-  document.getElementById('spinner').style.display = 'block';
-  try {
-    const res = await fetch(`${API}?todos=true`);
-    const data = await res.json();
-
-    if (!data || !data.ok || !Array.isArray(data.rows)) {
-      Swal.fire("⚠ No se pudo actualizar el stock");
-      return;
-    }
-
-    stockLocal = data.rows;
-    localStorage.setItem('stock', JSON.stringify(stockLocal));
-
-    const fecha = data.updatedAt || new Date().toLocaleString();
-    localStorage.setItem('ultimaActualizacion', fecha);
-    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
-
-    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer:1000 });
-  } catch (e) {
-    console.error(e);
-    Swal.fire("❌ Error al actualizar el stock");
-  } finally {
-    document.getElementById('spinner').style.display = 'none';
-  }
-}
-
-/** Render de la tabla */
-function renderTabla(rows) {
-  const tbody = document.getElementById('contenido');
-  tbody.innerHTML = '';
-
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-
-    // checkbox
-    const tdCheck = document.createElement('td');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = true;
-    cb.dataset.id = norm(r['N ANTEOJO']);
-    tdCheck.appendChild(cb);
-    tr.appendChild(tdCheck);
-
-    // columnas por orden visual
-    COL_KEYS.forEach(key => {
-      const td = document.createElement('td');
-      const val = r[key];
-      td.textContent = val ? String(val) : '-';
-      tr.appendChild(td);
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  document.getElementById('resultado').style.display = 'block';
-}
-
-/** Ordenar por columna visual */
-function ordenarPor(indiceVisual) {
-  const tbody = document.getElementById('contenido');
-  const filas = Array.from(tbody.querySelectorAll('tr'));
-
-  filas.sort((a, b) => {
-    const A = a.children[indiceVisual + 1].textContent.trim();
-    const B = b.children[indiceVisual + 1].textContent.trim();
-    const nA = Number(A.replace(/[^0-9.-]/g, ''));
-    const nB = Number(B.replace(/[^0-9.-]/g, ''));
-    if (!isNaN(nA) && !isNaN(nB)) return ordenAsc ? nA - nB : nB - nA;
-    return ordenAsc ? A.localeCompare(B) : B.localeCompare(A);
-  });
-
-  ordenAsc = !ordenAsc;
-  filas.forEach(f => tbody.appendChild(f));
-}
-
-/** Buscar por número exacto o por texto (avanzada) */
-async function buscarAnteojo() {
-  const input = document.getElementById('codigo');
-  const codigo = norm(input.value);
-  const avanzada = document.getElementById('busquedaAvanzada').checked;
-  const inicio = performance.now();
-
-  document.getElementById('spinner').style.display = 'block';
-  document.getElementById('tiempoBusqueda').textContent = '';
-  document.getElementById('cantidadResultados').textContent = '';
-
-  if (!codigo) {
-    Swal.fire("Ingresá un número o palabras clave");
-    document.getElementById('spinner').style.display = 'none';
-    return;
-  }
-
-  let resultados = [];
-
-  // 1) cache local por número
-  if (!avanzada && /^\d+$/.test(codigo) && stockLocal.length) {
-    resultados = stockLocal.filter(r => String(r['N ANTEOJO'] ?? '').replace(/\D+/g,'') === codigo);
-  }
-
-  // 2) si no hay, backend
-  if (resultados.length === 0) {
-    try {
-      if (!avanzada && /^\d+$/.test(codigo)) {
-        const res = await fetch(`${API}?todos=true&n=${encodeURIComponent(codigo)}`);
-        const data = await res.json();
-        if (data && data.ok && Array.isArray(data.rows)) resultados = data.rows;
-      } else {
-        if (stockLocal.length === 0) {
-          const res = await fetch(`${API}?todos=true`);
-          const data = await res.json();
-          if (data && data.ok && Array.isArray(data.rows)) stockLocal = data.rows;
-        }
-        const q = codigo.toLowerCase();
-        const campos = ['N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CRISTAL','FAMILIA','VENDEDOR','CODIGO DE BARRAS','OBSERVACIONES','FÁBRICA'];
-        resultados = stockLocal.filter(r => campos.some(k => String(r[k] ?? '').toLowerCase().includes(q)));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  if (resultados.length === 0) {
-    document.getElementById('resultado').style.display = 'none';
-    document.getElementById('cantidadResultados').textContent = 'No se encontraron resultados.';
-    document.getElementById('spinner').style.display = 'none';
-    return;
-  }
-
-  renderTabla(resultados);
-  document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${resultados.length} resultado(s).`;
-
-  document.getElementById('spinner').style.display = 'none';
-  const tiempo = (performance.now() - inicio).toFixed(2);
-  document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
-}
-
-/** Limpiar */
-function limpiar() {
-  document.getElementById('codigo').value = '';
-  document.getElementById('contenido').innerHTML = '';
-  document.getElementById('resultado').style.display = 'none';
-  document.getElementById('spinner').style.display = 'none';
-  document.getElementById('tiempoBusqueda').textContent = '';
-  document.getElementById('cantidadResultados').textContent = '';
-  document.getElementById('codigo').focus();
-}
-
-/** Init */
-window.onload = () => {
-  document.getElementById('codigo').focus();
-
-  const ultima = localStorage.getItem('ultimaActualizacion');
-  if (ultima) document.getElementById('ultimaActualizacion').textContent = 'Base de datos actualizada: ' + ultima;
-
-  const cache = localStorage.getItem('stock');
-  if (cache) { try { stockLocal = JSON.parse(cache); } catch {} }
-
-  document.getElementById('codigo').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); buscarAnteojo(); }
-  });
-};
-
-/** Auto-actualización diaria (09:05) */
-setInterval(() => {
-  const ahora = new Date();
-  if (ahora.getHours() === 9 && ahora.getMinutes() === 5 && ahora.getSeconds() < 10 && !sessionStorage.getItem('stockActualizadoHoy')) {
-    actualizarStock().then(() => {
-      const ts = new Date().toLocaleString();
-      document.getElementById('ultimaActualizacion').textContent = '🔄 Stock actualizado automáticamente: ' + ts;
-      sessionStorage.setItem('stockActualizadoHoy', 'true');
-    });
-  }
-}, 10000);
-</script>
-
-</body>
-</html>
+/** Claves “lógicas” en el orden visual de la tabla */
+const UI_KEYS = [
+'N ANTEOJO',
+'MARCA',
+'MODELO',
