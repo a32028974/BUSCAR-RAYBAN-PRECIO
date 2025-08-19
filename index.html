@@ -7,81 +7,25 @@
   <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-      text-align: center;
-    }
-
-    input, button {
-      padding: 10px;
-      margin: 10px;
-      font-size: 16px;
-    }
-
-    #spinner {
-      display: none;
-      font-size: 18px;
-      color: #444;
-      margin-top: 20px;
-    }
-
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 95%;
-      max-width: 1000px;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      cursor: pointer;
-    }
-
-    th:hover {
-      background-color: #f0f0f0;
-    }
-
-    #resultado {
-      display: none;
-    }
-
-    #ultimaActualizacion {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #666;
-      text-align: right;
-      padding-right: 20px;
-    }
-
-    #tiempoBusqueda,
-    #cantidadResultados {
-      font-size: 12px;
-      color: #888;
-      margin-top: 5px;
-    }
-
-    #cantidadResultados {
-      margin-top: 10px;
-      font-size: 13px;
-      font-weight: bold;
-    }
-
-    #busquedaAvanzadaLabel {
-      font-size: 14px;
-      color: #333;
-    }
+    body{font-family:Arial, sans-serif;background:#f5f5f5;padding:20px;text-align:center}
+    input,button{padding:10px;margin:10px;font-size:16px}
+    #spinner{display:none;font-size:18px;color:#444;margin-top:20px}
+    table{margin:20px auto;border-collapse:collapse;width:95%;max-width:1100px;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
+    th,td{padding:10px;border:1px solid #ccc}
+    th{cursor:pointer}
+    th:hover{background:#f0f0f0}
+    #resultado{display:none}
+    #ultimaActualizacion{margin-top:10px;font-size:14px;color:#666;text-align:right;padding-right:20px}
+    #tiempoBusqueda,#cantidadResultados{font-size:12px;color:#888;margin-top:5px}
+    #cantidadResultados{margin-top:10px;font-size:13px;font-weight:bold}
+    #busquedaAvanzadaLabel{font-size:14px;color:#333}
   </style>
 </head>
 <body>
 
 <h2>
-  <img src="logo_muy_chico_sinfondo.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
-  Número de anteojo.
+  <img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height:24px;vertical-align:middle;margin-right:8px;">
+  Número de anteojo
 </h2>
 
 <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
@@ -93,7 +37,7 @@
 <button onclick="limpiar()">Limpiar</button>
 <button onclick="actualizarStock()">Actualizar stock</button>
 
-<div id="spinner">🔍 Buscando anteojo...</div>
+<div id="spinner">🔍 Buscando...</div>
 <div id="cantidadResultados"></div>
 
 <div id="resultado">
@@ -123,79 +67,122 @@
 <div id="ultimaActualizacion"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbye3RORWk2HZFBdKayrKXKMM1jACMg14YZPIhxXNVo-yuLMlYpIsQAuCIWh2IlZLRF2ZA/exec';
+/** URL de tu App Script */
+const API = 'https://script.google.com/macros/s/AKfycby6SzAgXhtctDbYEGETB6Ku8X_atugp7Mld5QvimnDpXMmHU9IxW9XRqDkRI0rGONr85Q/exec';
 
-let stockLocal = [];
+/** Claves EXACTAS del Sheet (no cambian) y orden visual de columnas */
+const COL_KEYS = [
+  'N ANTEOJO',
+  'MARCA',
+  'MODELO',
+  'COLOR',
+  'ARMAZON',         // en la UI dice "ARMAZÓN"
+  'CALIBRE',
+  'CRISTAL',         // en la UI dice "COLOR CRISTAL"
+  'FAMILIA',
+  'PRECIO PUBLICO',  // en la UI lo mostramos como "PRECIO"
+  'FECHA DE VENTA',
+  'VENDEDOR',
+  'FECHA INGRESO'
+];
+
+let stockLocal = [];   // array de OBJETOS por encabezado
 let ordenAsc = true;
 
-function parseFechaFlexible(v) {
-  if (!v) return '';
-  // Si ya es Date o ISO, Date lo entiende
-  let d = new Date(v);
-  if (!isNaN(d)) {
-    const dd = String(d.getDate()).padStart(2,'0');
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const yy = d.getFullYear();
-    return `${dd}-${mm}-${yy}`;
-  }
-  // Si viene como dd/MM/yy (texto)
-  if (typeof v === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(v)) {
-    const [dd, mm, yy] = v.split('/');
-    const full = (yy.length === 2) ? ('20' + yy) : yy;
-    return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${full}`;
-  }
-  return String(v);
-}
+/** Utilidad: normaliza string */
+const norm = s => String(s ?? '').trim();
 
+/** Obtiene todo el stock como objetos por nombre de encabezado */
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
   try {
     const res = await fetch(`${API}?todos=true`);
-    const datos = await res.json();
+    const data = await res.json();
 
-    if (!Array.isArray(datos)) {
+    if (!data || !data.ok || !Array.isArray(data.rows)) {
       Swal.fire("⚠ No se pudo actualizar el stock");
       return;
     }
 
-    stockLocal = datos;
-    localStorage.setItem("stock", JSON.stringify(datos));
-    const fecha = new Date().toLocaleString();
-    localStorage.setItem("ultimaActualizacion", fecha);
+    stockLocal = data.rows; // objetos con claves EXACTAS
+    localStorage.setItem('stock', JSON.stringify(stockLocal));
+
+    const fecha = data.updatedAt || new Date().toLocaleString();
+    localStorage.setItem('ultimaActualizacion', fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
 
-    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer: 1000 });
+    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer:1000 });
   } catch (e) {
-    Swal.fire("❌ Error al actualizar el stock");
     console.error(e);
+    Swal.fire("❌ Error al actualizar el stock");
   } finally {
     document.getElementById('spinner').style.display = 'none';
   }
 }
 
-function ordenarPor(indice) {
+/** Render de filas (recibe objetos por encabezado) */
+function renderTabla(rows) {
   const tbody = document.getElementById('contenido');
-  const filas = Array.from(tbody.querySelectorAll("tr"));
-  filas.sort((a, b) => {
-    const valA = a.children[indice + 1].textContent.trim();
-    const valB = b.children[indice + 1].textContent.trim();
-    const numA = Number(valA.replace(/[^0-9.-]/g,''));
-    const numB = Number(valB.replace(/[^0-9.-]/g,''));
-    if (!isNaN(numA) && !isNaN(numB)) {
-      return ordenAsc ? numA - numB : numB - numA;
-    } else {
-      return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
+  tbody.innerHTML = '';
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+
+    // checkbox (para futuras acciones)
+    const tdCheck = document.createElement('td');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = true;
+    cb.dataset.id = norm(r['N ANTEOJO']);
+    tdCheck.appendChild(cb);
+    tr.appendChild(tdCheck);
+
+    // columnas según orden visual
+    COL_KEYS.forEach(key => {
+      const td = document.createElement('td');
+      const val = r[key];
+
+      // formato simple para fechas (backend ya envía dd/MM/yy)
+      const isFecha = key === 'FECHA INGRESO' || key === 'FECHA DE VENTA';
+      td.textContent = val ? (isFecha ? String(val) : String(val)) : '-';
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
   });
-  ordenAsc = !ordenAsc;
-  filas.forEach(fila => tbody.appendChild(fila));
+
+  document.getElementById('resultado').style.display = 'block';
 }
 
+/** Ordenar por índice visual (mapea al key correspondiente) */
+function ordenarPor(indiceVisual) {
+  const key = COL_KEYS[indiceVisual];
+  const tbody = document.getElementById('contenido');
+  const filas = Array.from(tbody.querySelectorAll('tr'));
+
+  filas.sort((a, b) => {
+    // +1 por la columna del checkbox
+    const A = a.children[indiceVisual + 1].textContent.trim();
+    const B = b.children[indiceVisual + 1].textContent.trim();
+    const nA = Number(A.replace(/[^0-9.-]/g, ''));
+    const nB = Number(B.replace(/[^0-9.-]/g, ''));
+    if (!isNaN(nA) && !isNaN(nB)) {
+      return ordenAsc ? nA - nB : nB - nA;
+    }
+    return ordenAsc ? A.localeCompare(B) : B.localeCompare(A);
+  });
+
+  ordenAsc = !ordenAsc;
+  filas.forEach(f => tbody.appendChild(f));
+}
+
+/** Buscar: por número exacto o por palabras (avanzada) */
 async function buscarAnteojo() {
   const input = document.getElementById('codigo');
-  const codigo = input.value.trim();
+  const codigo = norm(input.value);
   const avanzada = document.getElementById('busquedaAvanzada').checked;
   const inicio = performance.now();
+
   document.getElementById('spinner').style.display = 'block';
   document.getElementById('tiempoBusqueda').textContent = '';
   document.getElementById('cantidadResultados').textContent = '';
@@ -206,76 +193,54 @@ async function buscarAnteojo() {
     return;
   }
 
-  const tbody = document.getElementById('contenido');
-  const seleccionados = new Set();
-  Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
-    const checkbox = fila.querySelector("input[type='checkbox']");
-    if (checkbox?.checked) seleccionados.add(checkbox.dataset.id);
-    else if (avanzada) fila.remove();
-  });
-
   let resultados = [];
 
-  // 1) si hay stock cacheado y la búsqueda es simple por N°, filtramos local
-  if (!avanzada && Array.isArray(stockLocal) && stockLocal.length > 0 && /^\d+$/.test(codigo)) {
-    resultados = stockLocal.filter((fila) => Number(fila[0]) === Number(codigo));
+  // 1) Búsqueda simple por número con cache local
+  if (!avanzada && /^\d+$/.test(codigo) && stockLocal.length) {
+    resultados = stockLocal.filter(r => String(r['N ANTEOJO'] ?? '').replace(/\D+/g,'') === codigo);
   }
 
-  // 2) si no hay resultados locales, consultamos al endpoint directo
+  // 2) Si no hay cache o no encontró, consulto backend
   if (resultados.length === 0) {
     try {
-      const res = await fetch(`${API}?codigo=${encodeURIComponent(codigo)}`);
-      const datos = await res.json();
-      if (Array.isArray(datos)) resultados = datos;
+      if (!avanzada && /^\d+$/.test(codigo)) {
+        const res = await fetch(`${API}?todos=true&n=${encodeURIComponent(codigo)}`);
+        const data = await res.json();
+        if (data && data.ok && Array.isArray(data.rows)) resultados = data.rows;
+      } else {
+        // Avanzada: bajo (o uso) todo y filtro por texto en varias columnas
+        if (stockLocal.length === 0) {
+          const res = await fetch(`${API}?todos=true`);
+          const data = await res.json();
+          if (data && data.ok && Array.isArray(data.rows)) stockLocal = data.rows;
+        }
+        const q = codigo.toLowerCase();
+        const campos = ['N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CRISTAL','FAMILIA','VENDEDOR','CODIGO DE BARRAS','OBSERVACIONES','FÁBRICA'];
+        resultados = stockLocal.filter(r =>
+          campos.some(k => String(r[k] ?? '').toLowerCase().includes(q))
+        );
+      }
     } catch (err) {
       console.error(err);
     }
   }
 
-  let nuevos = 0;
-
   if (resultados.length === 0) {
-    Swal.fire("No se encontró ningún resultado");
-  } else {
-    resultados.forEach(fila => {
-      if (seleccionados.has(fila[0])) return;
-
-      const tr = document.createElement('tr');
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.dataset.id = fila[0];
-      checkbox.checked = true;
-
-      const tdCheck = document.createElement('td');
-      tdCheck.appendChild(checkbox);
-      tr.appendChild(tdCheck);
-
-      // Orden que ya usabas: [0,1,2,3,4,5,6,7,8,10,11,9]
-      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9];
-
-      indicesAMostrar.forEach(i => {
-        const td = document.createElement('td');
-        if (i === 10) { // FECHA_VENTA en tu estructura
-          td.textContent = parseFechaFlexible(fila[i]) || '-';
-        } else {
-          td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
-        }
-        tr.appendChild(td);
-      });
-
-      tbody.appendChild(tr);
-      nuevos++;
-    });
-
-    document.getElementById('resultado').style.display = 'block';
-    document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${nuevos} nuevos resultados.`;
+    document.getElementById('resultado').style.display = 'none';
+    document.getElementById('cantidadResultados').textContent = 'No se encontraron resultados.';
+    document.getElementById('spinner').style.display = 'none';
+    return;
   }
+
+  renderTabla(resultados);
+  document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${resultados.length} resultado(s).`;
 
   document.getElementById('spinner').style.display = 'none';
   const tiempo = (performance.now() - inicio).toFixed(2);
   document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
 }
 
+/** Limpiar */
 function limpiar() {
   document.getElementById('codigo').value = '';
   document.getElementById('contenido').innerHTML = '';
@@ -286,46 +251,33 @@ function limpiar() {
   document.getElementById('codigo').focus();
 }
 
+/** Init */
 window.onload = () => {
   document.getElementById('codigo').focus();
-  const ultima = localStorage.getItem("ultimaActualizacion");
-  const stockGuardado = localStorage.getItem("stock");
 
-  if (ultima) {
-    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
-  }
+  const ultima = localStorage.getItem('ultimaActualizacion');
+  if (ultima) document.getElementById('ultimaActualizacion').textContent = 'Base de datos actualizada: ' + ultima;
 
-  if (stockGuardado) {
-    try { stockLocal = JSON.parse(stockGuardado); } catch {}
-  }
+  const cache = localStorage.getItem('stock');
+  if (cache) { try { stockLocal = JSON.parse(cache); } catch {} }
 
-  document.getElementById("codigo").addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      buscarAnteojo();
-    }
+  document.getElementById('codigo').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); buscarAnteojo(); }
   });
 };
 
-// Auto-actualización diaria opcional (09:05)
+/** Auto-actualización diaria opcional (09:05) */
 setInterval(() => {
   const ahora = new Date();
-  const horas = ahora.getHours();
-  const minutos = ahora.getMinutes();
-  const segundos = ahora.getSeconds();
-  const yaActualizado = sessionStorage.getItem("stockActualizadoHoy");
-
-  if (horas === 9 && minutos === 5 && segundos < 10 && !yaActualizado) {
+  if (ahora.getHours() === 9 && ahora.getMinutes() === 5 && ahora.getSeconds() < 10 && !sessionStorage.getItem('stockActualizadoHoy')) {
     actualizarStock().then(() => {
-      const ahoraStr = new Date().toLocaleString();
-      document.getElementById("ultimaActualizacion").textContent =
-        "🔄 Stock actualizado automáticamente: " + ahoraStr;
-      sessionStorage.setItem("stockActualizadoHoy", "true");
+      const ts = new Date().toLocaleString();
+      document.getElementById('ultimaActualizacion').textContent = '🔄 Stock actualizado automáticamente: ' + ts;
+      sessionStorage.setItem('stockActualizadoHoy', 'true');
     });
   }
 }, 10000);
 </script>
-
 
 </body>
 </html>
