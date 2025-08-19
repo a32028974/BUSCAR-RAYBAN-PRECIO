@@ -1,136 +1,72 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock anteojos</title>
-  <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-      text-align: center;
-    }
-
-    input, button {
-      padding: 10px;
-      margin: 10px;
-      font-size: 16px;
-    }
-
-    #spinner {
-      display: none;
-      font-size: 18px;
-      color: #444;
-      margin-top: 20px;
-    }
-
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 95%;
-      max-width: 1000px;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      cursor: pointer;
-    }
-
-    th:hover {
-      background-color: #f0f0f0;
-    }
-
-    #resultado {
-      display: none;
-    }
-
-    #ultimaActualizacion {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #666;
-      text-align: right;
-      padding-right: 20px;
-    }
-
-    #tiempoBusqueda,
-    #cantidadResultados {
-      font-size: 12px;
-      color: #888;
-      margin-top: 5px;
-    }
-
-    #cantidadResultados {
-      margin-top: 10px;
-      font-size: 13px;
-      font-weight: bold;
-    }
-
-    #busquedaAvanzadaLabel {
-      font-size: 14px;
-      color: #333;
-    }
-  </style>
-</head>
-<body>
-
-<h2>
-  <img src="logo_muy_chico_sinfondo.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
-  Número de anteojo V19.8 19.02
-</h2>
-
-<input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
-<label id="busquedaAvanzadaLabel">
-  <input type="checkbox" id="busquedaAvanzada" />
-  Búsqueda avanzada
-</label><br>
-<button onclick="buscarAnteojo()">Buscar</button>
-<button onclick="limpiar()">Limpiar</button>
-<button onclick="actualizarStock()">Actualizar stock</button>
-
-<div id="spinner">🔍 Buscando anteojo...</div>
-<div id="cantidadResultados"></div>
-
-<div id="resultado">
-  <table>
-    <thead>
-      <tr>
-        <th></th>
-        <th onclick="ordenarPor(0)">N° ANT</th>
-        <th onclick="ordenarPor(1)">MARCA</th>
-        <th onclick="ordenarPor(2)">MODELO</th>
-        <th onclick="ordenarPor(3)">COLOR</th>
-        <th onclick="ordenarPor(4)">ARMAZÓN</th>
-        <th onclick="ordenarPor(5)">CALIBRE</th>
-        <th onclick="ordenarPor(6)">COLOR CRISTAL</th>
-        <th onclick="ordenarPor(7)">FAMILIA</th>
-        <th onclick="ordenarPor(8)">PRECIO</th>
-        <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
-        <th onclick="ordenarPor(10)">VENDEDOR</th>
-        <th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
-      </tr>
-    </thead>
-    <tbody id="contenido"></tbody>
-  </table>
-  <div id="tiempoBusqueda"></div>
-</div>
-
-<div id="ultimaActualizacion"></div>
-
 <script>
-const API = 'https://script.google.com/macros/s/AKfycby6SzAgXhtctDbYEGETB6Ku8X_atugp7Mld5QvimnDpXMmHU9IxW9XRqDkRI0rGONr85Q/exec';
+const API = 'https://script.google.com/macros/s/AKfycbye3RORWk2HZFBdKayrKXKMM1jACMg14YZPIhxXNVo-yuLMlYpIsQAuCIWh2IlZLRF2ZA/exec';
 
-let stockLocal = [];
+let stockLocal = [];        // arrays o objetos según backend
 let ordenAsc = true;
+let IDX = {};               // nombre encabezado -> índice real (si vienen arrays)
+
+// Encabezados oficiales del Sheet
+const HEADERS_CANON = [
+  'N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CALIBRE','CRISTAL',
+  'FAMILIA','PRECIO PUBLICO','FECHA INGRESO','FECHA DE VENTA','VENDEDOR',
+  'COSTO','CODIGO DE BARRAS','OBSERVACIONES','FÁBRICA'
+];
+
+// Orden visual de la tabla
+const DISPLAY_ORDER = [
+  'N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CALIBRE',
+  'CRISTAL','FAMILIA','PRECIO PUBLICO','FECHA DE VENTA','VENDEDOR','FECHA INGRESO'
+];
+
+// normalizador (sin tildes/espacios extra/mayúsculas)
+const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                   .replace(/\s+/g,' ').trim().toUpperCase();
+const digits = v => String(v ?? '').replace(/\D+/g,'');
+
+// sinónimos frecuentes
+const SYN = {
+  'N ANTEOJO': ['N° ANTEOJO','Nº ANTEOJO','N ANT','N° ANT'],
+  'ARMAZON'  : ['ARMAZÓN'],
+  'PRECIO PUBLICO': ['PRECIO PÚBLICO','PRECIO'],
+  'FÁBRICA'  : ['FABRICA']
+};
+
+// arma el mapa nombre->índice a partir de los headers reales del Sheet
+async function buildIndexMap() {
+  try {
+    const r = await fetch(`${API}?debug=headers`);
+    const j = await r.json();
+    const headers = (j && j.headers) || [];
+    const map = {};
+    headers.forEach((h,i)=> { map[norm(h)] = i; });
+
+    const findIdx = (wanted) => {
+      const n = norm(wanted);
+      if (map[n] != null) return map[n];
+      const alts = SYN[wanted] || [];
+      for (const alt of alts) {
+        const n2 = norm(alt);
+        if (map[n2] != null) return map[n2];
+      }
+      return null;
+    };
+
+    IDX = {};
+    HEADERS_CANON.forEach(name => {
+      const idx = findIdx(name);
+      if (idx != null) IDX[name] = idx;
+    });
+
+    localStorage.setItem('idxHeaders', JSON.stringify(IDX));
+    return true;
+  } catch (e) {
+    console.warn('No pude mapear headers:', e);
+    IDX = {}; return false;
+  }
+}
 
 function parseFechaFlexible(v) {
   if (!v) return '';
-  // Si ya es Date o ISO, Date lo entiende
   let d = new Date(v);
   if (!isNaN(d)) {
     const dd = String(d.getDate()).padStart(2,'0');
@@ -138,7 +74,6 @@ function parseFechaFlexible(v) {
     const yy = d.getFullYear();
     return `${dd}-${mm}-${yy}`;
   }
-  // Si viene como dd/MM/yy (texto)
   if (typeof v === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(v)) {
     const [dd, mm, yy] = v.split('/');
     const full = (yy.length === 2) ? ('20' + yy) : yy;
@@ -147,20 +82,28 @@ function parseFechaFlexible(v) {
   return String(v);
 }
 
+// Descarga todo el stock (soporta backend viejo o nuevo) y arma IDX si hace falta
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
   try {
-    const res = await fetch(`${API}?todos=true`);
-    const datos = await res.json();
+    await buildIndexMap();
 
-    if (!Array.isArray(datos)) {
+    const res = await fetch(`${API}?todos=true`);
+    const data = await res.json().catch(()=>null);
+
+    // Soporta {ok, rows} o [ ... ]
+    const rows = (data && Array.isArray(data.rows)) ? data.rows
+               : (Array.isArray(data) ? data : null);
+
+    if (!rows) {
+      console.error('Respuesta inesperada de ?todos=true:', data);
       Swal.fire("⚠ No se pudo actualizar el stock");
       return;
     }
 
-    stockLocal = datos;
-    localStorage.setItem("stock", JSON.stringify(datos));
-    const fecha = new Date().toLocaleString();
+    stockLocal = rows;
+    localStorage.setItem("stock", JSON.stringify(rows));
+    const fecha = (data && data.updatedAt) || new Date().toLocaleString();
     localStorage.setItem("ultimaActualizacion", fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
 
@@ -181,11 +124,8 @@ function ordenarPor(indice) {
     const valB = b.children[indice + 1].textContent.trim();
     const numA = Number(valA.replace(/[^0-9.-]/g,''));
     const numB = Number(valB.replace(/[^0-9.-]/g,''));
-    if (!isNaN(numA) && !isNaN(numB)) {
-      return ordenAsc ? numA - numB : numB - numA;
-    } else {
-      return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
+    if (!isNaN(numA) && !isNaN(numB)) return ordenAsc ? numA - numB : numB - numA;
+    return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
   });
   ordenAsc = !ordenAsc;
   filas.forEach(fila => tbody.appendChild(fila));
@@ -206,6 +146,13 @@ async function buscarAnteojo() {
     return;
   }
 
+  // Asegurar mapa de columnas
+  if (!IDX || !Object.keys(IDX).length) {
+    const cached = localStorage.getItem('idxHeaders');
+    if (cached) { try { IDX = JSON.parse(cached); } catch{} }
+    if (!IDX || !Object.keys(IDX).length) await buildIndexMap();
+  }
+
   const tbody = document.getElementById('contenido');
   const seleccionados = new Set();
   Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
@@ -216,64 +163,103 @@ async function buscarAnteojo() {
 
   let resultados = [];
 
-  // 1) si hay stock cacheado y la búsqueda es simple por N°, filtramos local
-  if (!avanzada && Array.isArray(stockLocal) && stockLocal.length > 0 && /^\d+$/.test(codigo)) {
-    resultados = stockLocal.filter((fila) => Number(fila[0]) === Number(codigo));
-  }
+  // Detecto si los rows son arrays (viejo) u objetos (nuevo)
+  const rowsAreArrays = stockLocal.length && Array.isArray(stockLocal[0]);
 
-  // 2) si no hay resultados locales, consultamos al endpoint directo
-  if (resultados.length === 0) {
-    try {
-      const res = await fetch(`${API}?codigo=${encodeURIComponent(codigo)}`);
-      const datos = await res.json();
-      if (Array.isArray(datos)) resultados = datos;
-    } catch (err) {
-      console.error(err);
+  // 1) cache: búsqueda simple por número
+  if (!avanzada && /^\d+$/.test(codigo) && stockLocal.length) {
+    if (rowsAreArrays) {
+      const iN = IDX['N ANTEOJO'] ?? 0;
+      resultados = stockLocal.filter(fila => Number(digits(fila[iN])) === Number(codigo));
+    } else {
+      resultados = stockLocal.filter(o => Number(digits(o['N ANTEOJO'])) === Number(codigo));
     }
   }
 
-  let nuevos = 0;
+  // 2) si no hay local, consulto backend moderno (?todos=true&n=...)
+  if (resultados.length === 0) {
+    try {
+      const res = await fetch(`${API}?todos=true&n=${encodeURIComponent(codigo)}`);
+      const data = await res.json();
+      const rows = (data && Array.isArray(data.rows)) ? data.rows
+                 : (Array.isArray(data) ? data : []);
+      if (rows.length) resultados = rows;
+      // fallback legacy (?codigo=...) por compatibilidad
+      if (!rows.length) {
+        const r2 = await fetch(`${API}?codigo=${encodeURIComponent(codigo)}`);
+        const d2 = await r2.json().catch(()=>[]);
+        if (Array.isArray(d2)) resultados = d2;
+      }
+    } catch (err) { console.error(err); }
+  }
 
   if (resultados.length === 0) {
     Swal.fire("No se encontró ningún resultado");
-  } else {
-    resultados.forEach(fila => {
-      if (seleccionados.has(fila[0])) return;
-
-      const tr = document.createElement('tr');
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.dataset.id = fila[0];
-      checkbox.checked = true;
-
-      const tdCheck = document.createElement('td');
-      tdCheck.appendChild(checkbox);
-      tr.appendChild(tdCheck);
-
-      // Orden que ya usabas: [0,1,2,3,4,5,6,7,8,10,11,9]
-      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9];
-
-      indicesAMostrar.forEach(i => {
-        const td = document.createElement('td');
-        if (i === 10) { // FECHA_VENTA en tu estructura
-          td.textContent = parseFechaFlexible(fila[i]) || '-';
-        } else {
-          td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
-        }
-        tr.appendChild(td);
-      });
-
-      tbody.appendChild(tr);
-      nuevos++;
-    });
-
-    document.getElementById('resultado').style.display = 'block';
-    document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${nuevos} nuevos resultados.`;
+    document.getElementById('spinner').style.display = 'none';
+    return;
   }
+
+  renderResultados(resultados);
+  document.getElementById('resultado').style.display = 'block';
+  document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${resultados.length} resultado(s).`;
 
   document.getElementById('spinner').style.display = 'none';
   const tiempo = (performance.now() - inicio).toFixed(2);
   document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
+}
+
+function renderResultados(rows) {
+  const tbody = document.getElementById('contenido');
+  tbody.innerHTML = '';
+
+  // ¿arrays u objetos?
+  const arrays = Array.isArray(rows[0]);
+
+  // indices a mostrar (si son arrays)
+  const idxMostrar = DISPLAY_ORDER.map(name => IDX[name]).filter(i => i != null);
+  const idxVenta   = IDX['FECHA DE VENTA'];
+  const idxIngreso = IDX['FECHA INGRESO'];
+
+  rows.forEach(fila => {
+    const tr = document.createElement('tr');
+
+    let id;
+    if (arrays) {
+      const iN = IDX['N ANTEOJO'] ?? 0;
+      id = fila[iN];
+    } else {
+      id = fila['N ANTEOJO'];
+    }
+
+    // checkbox
+    const tdCheck = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.id = String(id ?? '');
+    checkbox.checked = true;
+    tdCheck.appendChild(checkbox);
+    tr.appendChild(tdCheck);
+
+    if (arrays) {
+      idxMostrar.forEach(i => {
+        const td = document.createElement('td');
+        let val = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
+        if (i === idxVenta || i === idxIngreso) val = parseFechaFlexible(val) || '-';
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+    } else {
+      DISPLAY_ORDER.forEach(key => {
+        const td = document.createElement('td');
+        let val = fila[key];
+        const isFecha = (key === 'FECHA DE VENTA' || key === 'FECHA INGRESO');
+        td.textContent = (val == null || val === '') ? '-' : (isFecha ? parseFechaFlexible(val) : String(val));
+        tr.appendChild(td);
+      });
+    }
+
+    tbody.appendChild(tr);
+  });
 }
 
 function limpiar() {
@@ -290,20 +276,16 @@ window.onload = () => {
   document.getElementById('codigo').focus();
   const ultima = localStorage.getItem("ultimaActualizacion");
   const stockGuardado = localStorage.getItem("stock");
+  const cachedIdx = localStorage.getItem('idxHeaders');
 
   if (ultima) {
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
   }
-
-  if (stockGuardado) {
-    try { stockLocal = JSON.parse(stockGuardado); } catch {}
-  }
+  if (cachedIdx) { try { IDX = JSON.parse(cachedIdx); } catch{} }
+  if (stockGuardado) { try { stockLocal = JSON.parse(stockGuardado); } catch {} }
 
   document.getElementById("codigo").addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      buscarAnteojo();
-    }
+    if (event.key === "Enter") { event.preventDefault(); buscarAnteojo(); }
   });
 };
 
@@ -325,7 +307,3 @@ setInterval(() => {
   }
 }, 10000);
 </script>
-
-
-</body>
-</html>
