@@ -1,29 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock anteojos</title>
+  <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;text-align:center}
+    input,button{padding:10px;margin:10px;font-size:16px}
+    #spinner{display:none;font-size:18px;color:#444;margin-top:20px}
+    table{margin:20px auto;border-collapse:collapse;width:95%;max-width:1100px;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
+    th,td{padding:10px;border:1px solid #ccc}
+    th{cursor:pointer}
+    th:hover{background:#f0f0f0}
+    #resultado{display:none}
+    #ultimaActualizacion{margin-top:10px;font-size:14px;color:#666;text-align:right;padding-right:20px}
+    #tiempoBusqueda,#cantidadResultados{font-size:12px;color:#888;margin-top:5px}
+    #cantidadResultados{margin-top:10px;font-size:13px;font-weight:bold}
+    #busquedaAvanzadaLabel{font-size:14px;color:#333}
+  </style>
+</head>
+<body>
+
+<h2>
+  <img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height:24px;vertical-align:middle;margin-right:8px;">
+  Número de anteojo
+</h2>
+
+<input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
+<label id="busquedaAvanzadaLabel">
+  <input type="checkbox" id="busquedaAvanzada" />
+  Búsqueda avanzada
+</label><br>
+<button onclick="buscarAnteojo()">Buscar</button>
+<button onclick="limpiar()">Limpiar</button>
+<button onclick="actualizarStock()">Actualizar stock</button>
+
+<div id="spinner">🔍 Buscando...</div>
+<div id="cantidadResultados"></div>
+
+<div id="resultado">
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th onclick="ordenarPor(0)">N° ANT</th>
+        <th onclick="ordenarPor(1)">MARCA</th>
+        <th onclick="ordenarPor(2)">MODELO</th>
+        <th onclick="ordenarPor(3)">COLOR</th>
+        <th onclick="ordenarPor(4)">ARMAZÓN</th>
+        <th onclick="ordenarPor(5)">CALIBRE</th>
+        <th onclick="ordenarPor(6)">COLOR CRISTAL</th>
+        <th onclick="ordenarPor(7)">FAMILIA</th>
+        <th onclick="ordenarPor(8)">PRECIO</th>
+        <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
+        <th onclick="ordenarPor(10)">VENDEDOR</th>
+        <th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
+      </tr>
+    </thead>
+    <tbody id="contenido"></tbody>
+  </table>
+  <div id="tiempoBusqueda"></div>
+</div>
+
+<div id="ultimaActualizacion"></div>
+
 <script>
+/** URL de tu App Script (reemplazá si es otra) */
 const API = 'https://script.google.com/macros/s/AKfycbye3RORWk2HZFBdKayrKXKMM1jACMg14YZPIhxXNVo-yuLMlYpIsQAuCIWh2IlZLRF2ZA/exec';
 
-let stockLocal = [];        // arrays o objetos según backend
-let ordenAsc = true;
-let IDX = {};               // nombre encabezado -> índice real (si vienen arrays)
-
-// Encabezados oficiales del Sheet
+/** Encabezados oficiales del Sheet */
 const HEADERS_CANON = [
   'N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CALIBRE','CRISTAL',
   'FAMILIA','PRECIO PUBLICO','FECHA INGRESO','FECHA DE VENTA','VENDEDOR',
   'COSTO','CODIGO DE BARRAS','OBSERVACIONES','FÁBRICA'
 ];
 
-// Orden visual de la tabla
+/** Orden visual de la tabla (12 columnas mostradas) */
 const DISPLAY_ORDER = [
   'N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CALIBRE',
   'CRISTAL','FAMILIA','PRECIO PUBLICO','FECHA DE VENTA','VENDEDOR','FECHA INGRESO'
 ];
 
-// normalizador (sin tildes/espacios extra/mayúsculas)
+let stockLocal = [];  // arrays (backend viejo) u objetos (backend nuevo)
+let ordenAsc = true;
+
+// Mapeos: nombre -> índice (para arrays) y nombre -> clave real (para objetos)
+let IDX = {};     // ej: { 'N ANTEOJO': 0, 'MARCA': 1, ... }
+let REAL = {};    // ej: { 'N ANTEOJO': 'N ANTEOJO', 'ARMAZON': 'ARMAZÓN', ... }
+
+/* ------------ Helpers de normalización / sinónimos ------------ */
 const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
                    .replace(/\s+/g,' ').trim().toUpperCase();
 const digits = v => String(v ?? '').replace(/\D+/g,'');
-
-// sinónimos frecuentes
 const SYN = {
   'N ANTEOJO': ['N° ANTEOJO','Nº ANTEOJO','N ANT','N° ANT'],
   'ARMAZON'  : ['ARMAZÓN'],
@@ -31,43 +101,52 @@ const SYN = {
   'FÁBRICA'  : ['FABRICA']
 };
 
-// arma el mapa nombre->índice a partir de los headers reales del Sheet
-async function buildIndexMap() {
+/** Crea los mapeos IDX/REAL a partir de ?debug=headers */
+async function buildHeaderMaps() {
   try {
     const r = await fetch(`${API}?debug=headers`);
     const j = await r.json();
     const headers = (j && j.headers) || [];
-    const map = {};
-    headers.forEach((h,i)=> { map[norm(h)] = i; });
+
+    const mapPos = {};   // normalizado -> índice
+    const mapReal = {};  // normalizado -> string real
+    headers.forEach((h,i) => { mapPos[norm(h)] = i; mapReal[norm(h)] = String(h); });
 
     const findIdx = (wanted) => {
       const n = norm(wanted);
-      if (map[n] != null) return map[n];
+      if (mapPos[n] != null) return mapPos[n];
       const alts = SYN[wanted] || [];
-      for (const alt of alts) {
-        const n2 = norm(alt);
-        if (map[n2] != null) return map[n2];
-      }
+      for (const alt of alts) { const n2 = norm(alt); if (mapPos[n2] != null) return mapPos[n2]; }
       return null;
     };
+    const findReal = (wanted) => {
+      const n = norm(wanted);
+      if (mapReal[n] != null) return mapReal[n];
+      const alts = SYN[wanted] || [];
+      for (const alt of alts) { const n2 = norm(alt); if (mapReal[n2] != null) return mapReal[n2]; }
+      return wanted; // fallback
+    };
 
-    IDX = {};
+    IDX = {}; REAL = {};
     HEADERS_CANON.forEach(name => {
       const idx = findIdx(name);
+      const rk  = findReal(name);
       if (idx != null) IDX[name] = idx;
+      REAL[name] = rk;
     });
 
     localStorage.setItem('idxHeaders', JSON.stringify(IDX));
-    return true;
+    localStorage.setItem('realHeaders', JSON.stringify(REAL));
   } catch (e) {
     console.warn('No pude mapear headers:', e);
-    IDX = {}; return false;
+    IDX = {}; REAL = {};
   }
 }
 
+/* -------------------- Utils -------------------- */
 function parseFechaFlexible(v) {
   if (!v) return '';
-  let d = new Date(v);
+  const d = new Date(v);
   if (!isNaN(d)) {
     const dd = String(d.getDate()).padStart(2,'0');
     const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -82,11 +161,11 @@ function parseFechaFlexible(v) {
   return String(v);
 }
 
-// Descarga todo el stock (soporta backend viejo o nuevo) y arma IDX si hace falta
+/* -------------------- API -------------------- */
 async function actualizarStock() {
   document.getElementById('spinner').style.display = 'block';
   try {
-    await buildIndexMap();
+    await buildHeaderMaps();
 
     const res = await fetch(`${API}?todos=true`);
     const data = await res.json().catch(()=>null);
@@ -102,40 +181,100 @@ async function actualizarStock() {
     }
 
     stockLocal = rows;
-    localStorage.setItem("stock", JSON.stringify(rows));
+    localStorage.setItem('stock', JSON.stringify(rows));
+
     const fecha = (data && data.updatedAt) || new Date().toLocaleString();
-    localStorage.setItem("ultimaActualizacion", fecha);
+    localStorage.setItem('ultimaActualizacion', fecha);
     document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
 
-    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer: 1000 });
+    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer:1000 });
   } catch (e) {
-    Swal.fire("❌ Error al actualizar el stock");
     console.error(e);
+    Swal.fire("❌ Error al actualizar el stock");
   } finally {
     document.getElementById('spinner').style.display = 'none';
   }
 }
 
-function ordenarPor(indice) {
+/* -------------------- Render -------------------- */
+function renderResultados(rows) {
   const tbody = document.getElementById('contenido');
-  const filas = Array.from(tbody.querySelectorAll("tr"));
-  filas.sort((a, b) => {
-    const valA = a.children[indice + 1].textContent.trim();
-    const valB = b.children[indice + 1].textContent.trim();
-    const numA = Number(valA.replace(/[^0-9.-]/g,''));
-    const numB = Number(valB.replace(/[^0-9.-]/g,''));
-    if (!isNaN(numA) && !isNaN(numB)) return ordenAsc ? numA - numB : numB - numA;
-    return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+  tbody.innerHTML = '';
+
+  const arrays = Array.isArray(rows[0]); // backend viejo vs nuevo
+
+  // Si es arrays: calculo índices a mostrar una vez
+  const idxMostrar = arrays ? DISPLAY_ORDER.map(n => IDX[n]).filter(i => i != null) : null;
+  const idxVenta   = arrays ? IDX['FECHA DE VENTA'] : null;
+  const idxIngreso = arrays ? IDX['FECHA INGRESO'] : null;
+
+  // Si es objetos: preparo claves reales a mostrar
+  const realKeys = !arrays ? DISPLAY_ORDER.map(n => REAL[n] || n) : null;
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+
+    // checkbox + id por número de anteojo
+    let id;
+    if (arrays) { id = row[IDX['N ANTEOJO'] ?? 0]; }
+    else { id = row[REAL['N ANTEOJO'] || 'N ANTEOJO']; }
+
+    const tdCheck = document.createElement('td');
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = true;
+    check.dataset.id = String(id ?? '');
+    tdCheck.appendChild(check);
+    tr.appendChild(tdCheck);
+
+    if (arrays) {
+      idxMostrar.forEach(i => {
+        const td = document.createElement('td');
+        let val = (row[i] != null && row[i] !== '') ? row[i] : '-';
+        if (i === idxVenta || i === idxIngreso) val = parseFechaFlexible(val) || '-';
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+    } else {
+      realKeys.forEach(key => {
+        const td = document.createElement('td');
+        let val = row[key];
+        const isFecha = (key === (REAL['FECHA DE VENTA']||'FECHA DE VENTA') ||
+                         key === (REAL['FECHA INGRESO']||'FECHA INGRESO'));
+        td.textContent = (val == null || val === '') ? '-' : (isFecha ? parseFechaFlexible(val) : String(val));
+        tr.appendChild(td);
+      });
+    }
+
+    tbody.appendChild(tr);
   });
-  ordenAsc = !ordenAsc;
-  filas.forEach(fila => tbody.appendChild(fila));
+
+  document.getElementById('resultado').style.display = 'block';
 }
 
+/* -------------------- Ordenar -------------------- */
+function ordenarPor(indiceVisual) {
+  const tbody = document.getElementById('contenido');
+  const filas = Array.from(tbody.querySelectorAll('tr'));
+  filas.sort((a, b) => {
+    const A = a.children[indiceVisual + 1].textContent.trim();
+    const B = b.children[indiceVisual + 1].textContent.trim();
+    const nA = Number(A.replace(/[^0-9.-]/g, ''));
+    const nB = Number(B.replace(/[^0-9.-]/g, ''));
+    if (!isNaN(nA) && !isNaN(nB)) return ordenAsc ? nA - nB : nB - nA;
+    return ordenAsc ? A.localeCompare(B) : B.localeCompare(A);
+  });
+  ordenAsc = !ordenAsc;
+  filas.forEach(f => tbody.appendChild(f));
+}
+
+/* -------------------- Buscar -------------------- */
 async function buscarAnteojo() {
   const input = document.getElementById('codigo');
-  const codigo = input.value.trim();
+  const codigo = String(input.value || '').trim();
   const avanzada = document.getElementById('busquedaAvanzada').checked;
   const inicio = performance.now();
+
   document.getElementById('spinner').style.display = 'block';
   document.getElementById('tiempoBusqueda').textContent = '';
   document.getElementById('cantidadResultados').textContent = '';
@@ -146,37 +285,30 @@ async function buscarAnteojo() {
     return;
   }
 
-  // Asegurar mapa de columnas
-  if (!IDX || !Object.keys(IDX).length) {
-    const cached = localStorage.getItem('idxHeaders');
-    if (cached) { try { IDX = JSON.parse(cached); } catch{} }
-    if (!IDX || !Object.keys(IDX).length) await buildIndexMap();
+  // Aseguro mapeos
+  if (!Object.keys(IDX).length || !Object.keys(REAL).length) {
+    const c1 = localStorage.getItem('idxHeaders');
+    const c2 = localStorage.getItem('realHeaders');
+    if (c1) { try { IDX = JSON.parse(c1); } catch {} }
+    if (c2) { try { REAL = JSON.parse(c2); } catch {} }
+    if (!Object.keys(IDX).length || !Object.keys(REAL).length) await buildHeaderMaps();
   }
 
-  const tbody = document.getElementById('contenido');
-  const seleccionados = new Set();
-  Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
-    const checkbox = fila.querySelector("input[type='checkbox']");
-    if (checkbox?.checked) seleccionados.add(checkbox.dataset.id);
-    else if (avanzada) fila.remove();
-  });
-
   let resultados = [];
+  const arrays = stockLocal.length && Array.isArray(stockLocal[0]);
 
-  // Detecto si los rows son arrays (viejo) u objetos (nuevo)
-  const rowsAreArrays = stockLocal.length && Array.isArray(stockLocal[0]);
-
-  // 1) cache: búsqueda simple por número
+  // 1) local por número exacto (solo dígitos)
   if (!avanzada && /^\d+$/.test(codigo) && stockLocal.length) {
-    if (rowsAreArrays) {
+    if (arrays) {
       const iN = IDX['N ANTEOJO'] ?? 0;
-      resultados = stockLocal.filter(fila => Number(digits(fila[iN])) === Number(codigo));
+      resultados = stockLocal.filter(r => Number(digits(r[iN])) === Number(codigo));
     } else {
-      resultados = stockLocal.filter(o => Number(digits(o['N ANTEOJO'])) === Number(codigo));
+      const kN = REAL['N ANTEOJO'] || 'N ANTEOJO';
+      resultados = stockLocal.filter(r => Number(digits(r[kN])) === Number(codigo));
     }
   }
 
-  // 2) si no hay local, consulto backend moderno (?todos=true&n=...)
+  // 2) si no hay, backend moderno primero (?todos=true&n=...), luego legacy (?codigo=...)
   if (resultados.length === 0) {
     try {
       const res = await fetch(`${API}?todos=true&n=${encodeURIComponent(codigo)}`);
@@ -184,7 +316,7 @@ async function buscarAnteojo() {
       const rows = (data && Array.isArray(data.rows)) ? data.rows
                  : (Array.isArray(data) ? data : []);
       if (rows.length) resultados = rows;
-      // fallback legacy (?codigo=...) por compatibilidad
+
       if (!rows.length) {
         const r2 = await fetch(`${API}?codigo=${encodeURIComponent(codigo)}`);
         const d2 = await r2.json().catch(()=>[]);
@@ -194,13 +326,13 @@ async function buscarAnteojo() {
   }
 
   if (resultados.length === 0) {
-    Swal.fire("No se encontró ningún resultado");
+    document.getElementById('resultado').style.display = 'none';
+    document.getElementById('cantidadResultados').textContent = 'No se encontraron resultados.';
     document.getElementById('spinner').style.display = 'none';
     return;
   }
 
   renderResultados(resultados);
-  document.getElementById('resultado').style.display = 'block';
   document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${resultados.length} resultado(s).`;
 
   document.getElementById('spinner').style.display = 'none';
@@ -208,60 +340,7 @@ async function buscarAnteojo() {
   document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
 }
 
-function renderResultados(rows) {
-  const tbody = document.getElementById('contenido');
-  tbody.innerHTML = '';
-
-  // ¿arrays u objetos?
-  const arrays = Array.isArray(rows[0]);
-
-  // indices a mostrar (si son arrays)
-  const idxMostrar = DISPLAY_ORDER.map(name => IDX[name]).filter(i => i != null);
-  const idxVenta   = IDX['FECHA DE VENTA'];
-  const idxIngreso = IDX['FECHA INGRESO'];
-
-  rows.forEach(fila => {
-    const tr = document.createElement('tr');
-
-    let id;
-    if (arrays) {
-      const iN = IDX['N ANTEOJO'] ?? 0;
-      id = fila[iN];
-    } else {
-      id = fila['N ANTEOJO'];
-    }
-
-    // checkbox
-    const tdCheck = document.createElement('td');
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.dataset.id = String(id ?? '');
-    checkbox.checked = true;
-    tdCheck.appendChild(checkbox);
-    tr.appendChild(tdCheck);
-
-    if (arrays) {
-      idxMostrar.forEach(i => {
-        const td = document.createElement('td');
-        let val = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
-        if (i === idxVenta || i === idxIngreso) val = parseFechaFlexible(val) || '-';
-        td.textContent = val;
-        tr.appendChild(td);
-      });
-    } else {
-      DISPLAY_ORDER.forEach(key => {
-        const td = document.createElement('td');
-        let val = fila[key];
-        const isFecha = (key === 'FECHA DE VENTA' || key === 'FECHA INGRESO');
-        td.textContent = (val == null || val === '') ? '-' : (isFecha ? parseFechaFlexible(val) : String(val));
-        tr.appendChild(td);
-      });
-    }
-
-    tbody.appendChild(tr);
-  });
-}
-
+/* -------------------- Limpiar & Init -------------------- */
 function limpiar() {
   document.getElementById('codigo').value = '';
   document.getElementById('contenido').innerHTML = '';
@@ -274,36 +353,35 @@ function limpiar() {
 
 window.onload = () => {
   document.getElementById('codigo').focus();
-  const ultima = localStorage.getItem("ultimaActualizacion");
-  const stockGuardado = localStorage.getItem("stock");
-  const cachedIdx = localStorage.getItem('idxHeaders');
 
-  if (ultima) {
-    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
-  }
-  if (cachedIdx) { try { IDX = JSON.parse(cachedIdx); } catch{} }
-  if (stockGuardado) { try { stockLocal = JSON.parse(stockGuardado); } catch {} }
+  const ultima = localStorage.getItem('ultimaActualizacion');
+  if (ultima) document.getElementById('ultimaActualizacion').textContent = 'Base de datos actualizada: ' + ultima;
 
-  document.getElementById("codigo").addEventListener("keydown", function(event) {
-    if (event.key === "Enter") { event.preventDefault(); buscarAnteojo(); }
+  const cache = localStorage.getItem('stock');
+  if (cache) { try { stockLocal = JSON.parse(cache); } catch {} }
+
+  const c1 = localStorage.getItem('idxHeaders');
+  const c2 = localStorage.getItem('realHeaders');
+  if (c1) { try { IDX = JSON.parse(c1); } catch {} }
+  if (c2) { try { REAL = JSON.parse(c2); } catch {} }
+
+  document.getElementById('codigo').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); buscarAnteojo(); }
   });
 };
 
-// Auto-actualización diaria opcional (09:05)
+/** Auto-actualización diaria (09:05) */
 setInterval(() => {
   const ahora = new Date();
-  const horas = ahora.getHours();
-  const minutos = ahora.getMinutes();
-  const segundos = ahora.getSeconds();
-  const yaActualizado = sessionStorage.getItem("stockActualizadoHoy");
-
-  if (horas === 9 && minutos === 5 && segundos < 10 && !yaActualizado) {
+  if (ahora.getHours() === 9 && ahora.getMinutes() === 5 && ahora.getSeconds() < 10 && !sessionStorage.getItem('stockActualizadoHoy')) {
     actualizarStock().then(() => {
-      const ahoraStr = new Date().toLocaleString();
-      document.getElementById("ultimaActualizacion").textContent =
-        "🔄 Stock actualizado automáticamente: " + ahoraStr;
-      sessionStorage.setItem("stockActualizadoHoy", "true");
+      const ts = new Date().toLocaleString();
+      document.getElementById('ultimaActualizacion').textContent = '🔄 Stock actualizado automáticamente: ' + ts;
+      sessionStorage.setItem('stockActualizadoHoy', 'true');
     });
   }
 }, 10000);
 </script>
+
+</body>
+</html>
