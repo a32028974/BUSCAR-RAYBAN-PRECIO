@@ -1,84 +1,332 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Stock anteojos</title>
-<link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-body{font-family:Arial, sans-serif;background:#f5f5f5;padding:20px;text-align:center}
-input,button{padding:10px;margin:10px;font-size:16px}
-#spinner{display:none;font-size:18px;color:#444;margin-top:20px}
-table{margin:20px auto;border-collapse:collapse;width:95%;max-width:1100px;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1)}
-th,td{padding:10px;border:1px solid #ccc}
-th{cursor:pointer}
-th:hover{background:#f0f0f0}
-#resultado{display:none}
-#ultimaActualizacion{margin-top:10px;font-size:14px;color:#666;text-align:right;padding-right:20px}
-#tiempoBusqueda,#cantidadResultados{font-size:12px;color:#888;margin-top:5px}
-#cantidadResultados{margin-top:10px;font-size:13px;font-weight:bold}
-#busquedaAvanzadaLabel{font-size:14px;color:#333}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock anteojos</title>
+  <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+    }
+
+    #spinner {
+      display: none;
+      font-size: 18px;
+      color: #444;
+      margin-top: 20px;
+    }
+
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 95%;
+      max-width: 1000px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+
+    th:hover {
+      background-color: #f0f0f0;
+    }
+
+    #resultado {
+      display: none;
+    }
+
+    #ultimaActualizacion {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+      text-align: right;
+      padding-right: 20px;
+    }
+
+    #tiempoBusqueda,
+    #cantidadResultados {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    #cantidadResultados {
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    #busquedaAvanzadaLabel {
+      font-size: 14px;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
 
-
 <h2>
-<img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height:24px;vertical-align:middle;margin-right:8px;">
-Número de anteojo
+  <img src="logo_muy_chico_sinfondo.png" alt="Ray-Ban" style="height: 24px; vertical-align: middle; margin-right: 8px;" />
+  Número de anteojo
+  Número de anteojo.
 </h2>
-
 
 <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
 <label id="busquedaAvanzadaLabel">
-<input type="checkbox" id="busquedaAvanzada" />
-Búsqueda avanzada
+  <input type="checkbox" id="busquedaAvanzada" />
+  Búsqueda avanzada
 </label><br>
 <button onclick="buscarAnteojo()">Buscar</button>
 <button onclick="limpiar()">Limpiar</button>
 <button onclick="actualizarStock()">Actualizar stock</button>
 
-
-<div id="spinner">🔍 Buscando...</div>
+<div id="spinner">🔍 Buscando anteojo...</div>
 <div id="cantidadResultados"></div>
 
-
 <div id="resultado">
-<table>
-<thead>
-<tr>
-<th></th>
-<th onclick="ordenarPor(0)">N° ANT</th>
-<th onclick="ordenarPor(1)">MARCA</th>
-<th onclick="ordenarPor(2)">MODELO</th>
-<th onclick="ordenarPor(3)">COLOR</th>
-<th onclick="ordenarPor(4)">ARMAZÓN</th>
-<th onclick="ordenarPor(5)">CALIBRE</th>
-<th onclick="ordenarPor(6)">COLOR CRISTAL</th>
-<th onclick="ordenarPor(7)">FAMILIA</th>
-<th onclick="ordenarPor(8)">PRECIO</th>
-<th onclick="ordenarPor(9)">FECHA DE VENTA</th>
-<th onclick="ordenarPor(10)">VENDEDOR</th>
-<th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
-</tr>
-</thead>
-<tbody id="contenido"></tbody>
-</table>
-<div id="tiempoBusqueda"></div>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th onclick="ordenarPor(0)">N° ANT</th>
+        <th onclick="ordenarPor(1)">MARCA</th>
+        <th onclick="ordenarPor(2)">MODELO</th>
+        <th onclick="ordenarPor(3)">COLOR</th>
+        <th onclick="ordenarPor(4)">ARMAZÓN</th>
+        <th onclick="ordenarPor(5)">CALIBRE</th>
+        <th onclick="ordenarPor(6)">COLOR CRISTAL</th>
+        <th onclick="ordenarPor(7)">FAMILIA</th>
+        <th onclick="ordenarPor(8)">PRECIO</th>
+        <th onclick="ordenarPor(9)">FECHA DE VENTA</th>
+        <th onclick="ordenarPor(10)">VENDEDOR</th>
+        <th onclick="ordenarPor(11)">FECHA DE INGRESO</th>
+      </tr>
+    </thead>
+    <tbody id="contenido"></tbody>
+  </table>
+  <div id="tiempoBusqueda"></div>
 </div>
-
 
 <div id="ultimaActualizacion"></div>
 
-
 <script>
-/** URL de tu App Script (la NUEVA) */
-const API = 'https://script.google.com/macros/s/AKfycby6SzAgXhtctDbYEGETB6Ku8X_atugp7Mld5QvimnDpXMmHU9IxW9XRqDkRI0rGONr85Q/exec';
+const API = 'https://script.google.com/macros/s/AKfycbye3RORWk2HZFBdKayrKXKMM1jACMg14YZPIhxXNVo-yuLMlYpIsQAuCIWh2IlZLRF2ZA/exec';
+
+let stockLocal = [];
+let ordenAsc = true;
+
+function parseFechaFlexible(v) {
+  if (!v) return '';
+  // Si ya es Date o ISO, Date lo entiende
+  let d = new Date(v);
+  if (!isNaN(d)) {
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    return `${dd}-${mm}-${yy}`;
+  }
+  // Si viene como dd/MM/yy (texto)
+  if (typeof v === 'string' && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(v)) {
+    const [dd, mm, yy] = v.split('/');
+    const full = (yy.length === 2) ? ('20' + yy) : yy;
+    return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${full}`;
+  }
+  return String(v);
+}
+
+async function actualizarStock() {
+  document.getElementById('spinner').style.display = 'block';
+  try {
+    const res = await fetch(`${API}?todos=true`);
+    const datos = await res.json();
+
+    if (!Array.isArray(datos)) {
+      Swal.fire("⚠ No se pudo actualizar el stock");
+      return;
+    }
+
+    stockLocal = datos;
+    localStorage.setItem("stock", JSON.stringify(datos));
+    const fecha = new Date().toLocaleString();
+    localStorage.setItem("ultimaActualizacion", fecha);
+    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + fecha;
+
+    Swal.fire({ icon:'success', title:'Stock actualizado', showConfirmButton:false, timer: 1000 });
+  } catch (e) {
+    Swal.fire("❌ Error al actualizar el stock");
+    console.error(e);
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+  }
+}
+
+function ordenarPor(indice) {
+  const tbody = document.getElementById('contenido');
+  const filas = Array.from(tbody.querySelectorAll("tr"));
+  filas.sort((a, b) => {
+    const valA = a.children[indice + 1].textContent.trim();
+    const valB = b.children[indice + 1].textContent.trim();
+    const numA = Number(valA.replace(/[^0-9.-]/g,''));
+    const numB = Number(valB.replace(/[^0-9.-]/g,''));
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return ordenAsc ? numA - numB : numB - numA;
+    } else {
+      return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+  });
+  ordenAsc = !ordenAsc;
+  filas.forEach(fila => tbody.appendChild(fila));
+}
+
+async function buscarAnteojo() {
+  const input = document.getElementById('codigo');
+  const codigo = input.value.trim();
+  const avanzada = document.getElementById('busquedaAvanzada').checked;
+  const inicio = performance.now();
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('tiempoBusqueda').textContent = '';
+  document.getElementById('cantidadResultados').textContent = '';
+
+  if (!codigo) {
+    Swal.fire("Ingresá un número o palabras clave");
+    document.getElementById('spinner').style.display = 'none';
+    return;
+  }
+
+  const tbody = document.getElementById('contenido');
+  const seleccionados = new Set();
+  Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
+    const checkbox = fila.querySelector("input[type='checkbox']");
+    if (checkbox?.checked) seleccionados.add(checkbox.dataset.id);
+    else if (avanzada) fila.remove();
+  });
+
+  let resultados = [];
+
+  // 1) si hay stock cacheado y la búsqueda es simple por N°, filtramos local
+  if (!avanzada && Array.isArray(stockLocal) && stockLocal.length > 0 && /^\d+$/.test(codigo)) {
+    resultados = stockLocal.filter((fila) => Number(fila[0]) === Number(codigo));
+  }
+
+  // 2) si no hay resultados locales, consultamos al endpoint directo
+  if (resultados.length === 0) {
+    try {
+      const res = await fetch(`${API}?codigo=${encodeURIComponent(codigo)}`);
+      const datos = await res.json();
+      if (Array.isArray(datos)) resultados = datos;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  let nuevos = 0;
+
+  if (resultados.length === 0) {
+    Swal.fire("No se encontró ningún resultado");
+  } else {
+    resultados.forEach(fila => {
+      if (seleccionados.has(fila[0])) return;
+
+      const tr = document.createElement('tr');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.id = fila[0];
+      checkbox.checked = true;
+
+      const tdCheck = document.createElement('td');
+      tdCheck.appendChild(checkbox);
+      tr.appendChild(tdCheck);
+
+      // Orden que ya usabas: [0,1,2,3,4,5,6,7,8,10,11,9]
+      const indicesAMostrar = [0,1,2,3,4,5,6,7,8,10,11,9];
+
+      indicesAMostrar.forEach(i => {
+        const td = document.createElement('td');
+        if (i === 10) { // FECHA_VENTA en tu estructura
+          td.textContent = parseFechaFlexible(fila[i]) || '-';
+        } else {
+          td.textContent = (fila[i] != null && fila[i] !== "") ? fila[i] : '-';
+        }
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+      nuevos++;
+    });
+
+    document.getElementById('resultado').style.display = 'block';
+    document.getElementById('cantidadResultados').textContent = `🔎 Se encontraron ${nuevos} nuevos resultados.`;
+  }
+
+  document.getElementById('spinner').style.display = 'none';
+  const tiempo = (performance.now() - inicio).toFixed(2);
+  document.getElementById('tiempoBusqueda').textContent = `⏱ Tiempo de búsqueda: ${tiempo} ms`;
+}
+
+function limpiar() {
+  document.getElementById('codigo').value = '';
+  document.getElementById('contenido').innerHTML = '';
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('tiempoBusqueda').textContent = '';
+  document.getElementById('cantidadResultados').textContent = '';
+  document.getElementById('codigo').focus();
+}
+
+window.onload = () => {
+  document.getElementById('codigo').focus();
+  const ultima = localStorage.getItem("ultimaActualizacion");
+  const stockGuardado = localStorage.getItem("stock");
+
+  if (ultima) {
+    document.getElementById('ultimaActualizacion').textContent = "Base de datos actualizada: " + ultima;
+  }
+
+  if (stockGuardado) {
+    try { stockLocal = JSON.parse(stockGuardado); } catch {}
+  }
+
+  document.getElementById("codigo").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      buscarAnteojo();
+    }
+  });
+};
+
+// Auto-actualización diaria opcional (09:05)
+setInterval(() => {
+  const ahora = new Date();
+  const horas = ahora.getHours();
+  const minutos = ahora.getMinutes();
+  const segundos = ahora.getSeconds();
+  const yaActualizado = sessionStorage.getItem("stockActualizadoHoy");
+
+  if (horas === 9 && minutos === 5 && segundos < 10 && !yaActualizado) {
+    actualizarStock().then(() => {
+      const ahoraStr = new Date().toLocaleString();
+      document.getElementById("ultimaActualizacion").textContent =
+        "🔄 Stock actualizado automáticamente: " + ahoraStr;
+      sessionStorage.setItem("stockActualizadoHoy", "true");
+    });
+  }
+}, 10000);
+</script>
 
 
-/** Claves “lógicas” en el orden visual de la tabla */
-const UI_KEYS = [
-'N ANTEOJO',
-'MARCA',
-'MODELO',
+</body>
+</html>
