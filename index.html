@@ -25,7 +25,7 @@
 
 <h2>
   <img src="logo_muy_chico_sinfondo.png" alt="Óptica Cristal" style="height:24px;vertical-align:middle;margin-right:8px;">
-  Número de anteojo 10.05
+  Número de anteojo 10.15
 </h2>
 
 <input type="text" id="codigo" placeholder="Buscar por número o palabras clave" />
@@ -83,15 +83,14 @@ const DISPLAY_ORDER = [
   'CRISTAL','FAMILIA','PRECIO PUBLICO','FECHA DE VENTA','VENDEDOR','FECHA INGRESO'
 ];
 
-/** Fallback si NO hay ?debug=headers (orden típico que ya usabas):
- *  en el origen viene: ... PRECIO, FECHA INGRESO, FECHA DE VENTA, VENDEDOR
+/** Fallback por índice (cuando no hay ?debug=headers)
+ *  Nota: acá ya está el FIX → PRECIO PUBLICO es 6 y CRISTAL es 8
  */
 const DEFAULT_IDX = {
   'N ANTEOJO':0,'MARCA':1,'MODELO':2,'COLOR':3,'ARMAZON':4,'CALIBRE':5,
   'PRECIO PUBLICO':6,'FAMILIA':7,'CRISTAL':8,
   'FECHA INGRESO':9,'FECHA DE VENTA':10,'VENDEDOR':11
 };
-
 
 let stockLocal = [];  // arrays (viejo) u objetos (nuevo)
 let ordenAsc = true;
@@ -184,6 +183,22 @@ function parseFechaFlexible(v){
   return String(v);
 }
 
+// Heurística para detectar si CRISTAL y PRECIO quedaron invertidos (cuando usamos índices)
+function numLike(v){ const n = Number(String(v).replace(/[^0-9.-]/g,'')); return !isNaN(n) && String(v).trim()!==''; }
+function maybeFixCristalPrecio(rows){
+  if (!Array.isArray(rows) || !rows.length) return;
+  const iC = IDX['CRISTAL'], iP = IDX['PRECIO PUBLICO'];
+  if (typeof iC!=='number' || typeof iP!=='number') return;
+  const sample = rows.slice(0, Math.min(rows.length,20));
+  const cristalNum = sample.filter(r=>numLike(r[iC])).length;
+  const precioNum  = sample.filter(r=>numLike(r[iP])).length;
+  // Si "CRISTAL" parece más numérico que "PRECIO", los invertimos
+  if (cristalNum > precioNum) {
+    [IDX['CRISTAL'], IDX['PRECIO PUBLICO']] = [IDX['PRECIO PUBLICO'], IDX['CRISTAL']];
+    localStorage.setItem('idxHeaders', JSON.stringify(IDX));
+  }
+}
+
 /* ---------------- API ---------------- */
 async function actualizarStock(){
   document.getElementById('spinner').style.display = 'block';
@@ -201,6 +216,9 @@ async function actualizarStock(){
     }
 
     stockLocal = rows;
+    // autocorrección por si las columnas vinieron invertidas
+    if (Array.isArray(stockLocal[0])) maybeFixCristalPrecio(stockLocal);
+
     localStorage.setItem('stock', JSON.stringify(rows));
 
     const fecha = (data && data.updatedAt) || new Date().toLocaleString();
@@ -330,6 +348,9 @@ async function buscarAnteojo(){
     document.getElementById('spinner').style.display='none';
     return;
   }
+
+  // autocorrección por si CRISTAL/PRECIO vinieron invertidos
+  if (Array.isArray(resultados[0])) maybeFixCristalPrecio(resultados);
 
   renderResultados(resultados);
   document.getElementById('cantidadResultados').textContent=`🔎 Se encontraron ${resultados.length} resultado(s).`;
