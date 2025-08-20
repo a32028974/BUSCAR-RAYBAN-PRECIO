@@ -1,14 +1,27 @@
-/** URL del Apps Script (cambiá si usás otra) */
+/* ===== Versión del front (debe coincidir con index.html) ===== */
+const APP_VERSION = '2025-08-20_10-59';
+
+/* Limpiar caches locales automáticamente al cambiar versión */
+(() => {
+  const last = localStorage.getItem('APP_VERSION');
+  if (last !== APP_VERSION) {
+    localStorage.removeItem('stock');
+    localStorage.removeItem('idxHeaders');
+    localStorage.removeItem('realHeaders');
+    sessionStorage.removeItem('stockActualizadoHoy');
+    localStorage.setItem('APP_VERSION', APP_VERSION);
+  }
+})();
+
+/** URL del Apps Script */
 const API = 'https://script.google.com/macros/s/AKfycbye3RORWk2HZFBdKayrKXKMM1jACMg14YZPIhxXNVo-yuLMlYpIsQAuCIWh2IlZLRF2ZA/exec';
 
-/** Encabezados oficiales del Sheet */
+/** Encabezados oficiales y orden visual */
 const HEADERS_CANON = [
   'N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CALIBRE','CRISTAL',
   'FAMILIA','PRECIO PUBLICO','FECHA INGRESO','FECHA DE VENTA','VENDEDOR',
   'COSTO','CODIGO DE BARRAS','OBSERVACIONES','FÁBRICA'
 ];
-
-/** Orden visual en la tabla (12 columnas que mostramos) */
 const DISPLAY_ORDER = [
   'N ANTEOJO','MARCA','MODELO','COLOR','ARMAZON','CALIBRE',
   'CRISTAL','FAMILIA','PRECIO PUBLICO','FECHA DE VENTA','VENDEDOR','FECHA INGRESO'
@@ -27,10 +40,10 @@ let stockLocal = [];  // arrays (viejo) u objetos (nuevo)
 let ordenAsc = true;
 
 // Mapeos
-let IDX = {};   // nombre -> índice (para arrays)
-let REAL = {};  // nombre -> clave real (para objetos)
+let IDX = {};   // nombre -> índice (arrays)
+let REAL = {};  // nombre -> clave real (objetos)
 
-// -------- Normalización / sinónimos ----------
+// ---------- Normalización / sinónimos ----------
 const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
                    .replace(/\s+/g,' ').trim().toUpperCase();
 const digits = v => String(v ?? '').replace(/\D+/g,'');
@@ -41,10 +54,10 @@ const SYN = {
   'FÁBRICA':['FABRICA']
 };
 
-// --------- Headers dinámicos ----------
+// ---------- Headers dinámicos ----------
 async function buildHeaderMaps(){
   try {
-    const r = await fetch(API+'?debug=headers');
+    const r = await fetch(API+'?debug=headers', { cache: 'no-store' });
     const j = await r.json();
     const headers = (j && j.headers) || [];
     if (!Array.isArray(headers) || headers.length === 0) throw new Error('sin headers');
@@ -76,7 +89,7 @@ async function buildHeaderMaps(){
 
   } catch(_) {
     // fallback seguro
-    IDX = {...DEFAULT_IDX};
+    IDX = { ...DEFAULT_IDX };
     REAL = HEADERS_CANON.reduce((o,k)=> (o[k]=k,o),{});
   }
   localStorage.setItem('idxHeaders', JSON.stringify(IDX));
@@ -95,7 +108,7 @@ async function ensureMaps(){
   }
 }
 
-// --------- Utils ----------
+// ---------- Utils ----------
 function parseFechaFlexible(v){
   if (!v) return '';
   const d = new Date(v);
@@ -130,7 +143,7 @@ function learnFromSampleRow(row){
 function applyLearnIfLabeled(rows){
   if (!Array.isArray(rows) || !rows.length) return;
   const arrays = Array.isArray(rows[0]);
-  const missing = ['CRISTAL','FAMILIA','PRECIO PUBLICO','FECHA DE VENTA','FECHA INGRESO','VENDEDOR']
+  const missing = ['CRISTAL','FAMILIA','PRECIO PUBLICO','FECHA DE VENTA','FECHA DE INGRESO','VENDEDOR']
                   .some(k => typeof IDX[k] !== 'number');
   if (arrays && missing){ learnFromSampleRow(rows[0]); }
 }
@@ -150,13 +163,13 @@ function maybeFixCristalPrecio(rows){
   }
 }
 
-// --------- API ----------
+// ---------- API ----------
 async function actualizarStock(){
   document.getElementById('spinner').style.display = 'block';
   try{
     await ensureMaps();
 
-    const res = await fetch(API+'?todos=true');
+    const res = await fetch(API+'?todos=true', { cache: 'no-store' });
     const data = await res.json().catch(()=>null);
     const rows = (data && Array.isArray(data.rows)) ? data.rows
                : (Array.isArray(data) ? data : null);
@@ -187,7 +200,7 @@ async function actualizarStock(){
   }
 }
 
-// --------- Render ----------
+// ---------- Render ----------
 function renderResultados(rows){
   const tbody = document.getElementById('contenido');
   tbody.innerHTML = '';
@@ -232,7 +245,7 @@ function renderResultados(rows){
   document.getElementById('resultado').style.display = 'block';
 }
 
-// --------- Ordenar ----------
+// ---------- Ordenar ----------
 function ordenarPor(indiceVisual){
   const tbody = document.getElementById('contenido');
   const filas = Array.from(tbody.querySelectorAll('tr'));
@@ -246,7 +259,7 @@ function ordenarPor(indiceVisual){
   ordenAsc=!ordenAsc; filas.forEach(f=>tbody.appendChild(f));
 }
 
-// --------- Buscar ----------
+// ---------- Buscar ----------
 async function buscarAnteojo(){
   const input=document.getElementById('codigo');
   const codigo=String(input.value||'').trim();
@@ -282,13 +295,13 @@ async function buscarAnteojo(){
   // 2) backend moderno y legacy
   if(resultados.length===0){
     try{
-      const r1 = await fetch(API+'?todos=true&n='+encodeURIComponent(codigo));
+      const r1 = await fetch(API+'?todos=true&n='+encodeURIComponent(codigo), { cache: 'no-store' });
       const j1 = await r1.json();
       const rows1 = (j1 && Array.isArray(j1.rows)) ? j1.rows : (Array.isArray(j1) ? j1 : []);
       if (rows1.length) resultados = rows1;
 
       if (!rows1.length){
-        const r2 = await fetch(API+'?codigo='+encodeURIComponent(codigo));
+        const r2 = await fetch(API+'?codigo='+encodeURIComponent(codigo), { cache: 'no-store' });
         const j2 = await r2.json().catch(()=>[]);
         if (Array.isArray(j2)) resultados = j2;
       }
@@ -314,7 +327,7 @@ async function buscarAnteojo(){
   document.getElementById('tiempoBusqueda').textContent=`⏱ Tiempo de búsqueda: ${tiempo} ms`;
 }
 
-// --------- Limpiar & Init ----------
+// ---------- Limpiar & Init ----------
 function limpiar(){
   document.getElementById('codigo').value='';
   document.getElementById('contenido').innerHTML='';
